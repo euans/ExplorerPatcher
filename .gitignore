@@ -357,3 +357,14 @@ MigrationBackup/
 
 # Ionide (cross platform F# VS Code tools) working folder
 .ionide/
+
+# --- Personal / machine-specific (local deploy tooling, backups, scripts) ---
+staging/
+*.ps1
+!ep_weather_patch/make_stamp.ps1
+*.altweather-old-*
+*.altweather-failed-*
+ExplorerPatcher-backup-*/
+*.local
+.claude/
+CLAUDE.md
