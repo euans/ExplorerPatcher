@@ -1112,6 +1112,16 @@ LRESULT CALLBACK epw_Weather_WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPA
         }
         _ep_Weather_ReboundBrowser(_this, !wcscmp(L"about:blank", uri ? uri : L""));
         CoTaskMemFree(uri);
+        // This message is posted by epw_Weather_Show right before the window is shown, so it runs once the window is
+        // visible. A scheduled refresh loads a new page while the flyout is hidden, so that page's first frame may
+        // never have been presented and the flyout can stay blank after a long idle. Toggle the visibility (the same
+        // kick NavigationCompleted uses while a page loads) to force a repaint.
+        if (_this->pCoreWebView2Controller)
+        {
+            _this->pCoreWebView2Controller->lpVtbl->NotifyParentWindowPositionChanged(_this->pCoreWebView2Controller);
+            _this->pCoreWebView2Controller->lpVtbl->put_IsVisible(_this->pCoreWebView2Controller, FALSE);
+            _this->pCoreWebView2Controller->lpVtbl->put_IsVisible(_this->pCoreWebView2Controller, TRUE);
+        }
         return 0;
     }
     else if (uMsg == EP_WEATHER_WM_FETCH_DATA)
