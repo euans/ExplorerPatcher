@@ -247,18 +247,58 @@ static BOOL ProcessRunning(LPCWSTR exeName)
     return found;
 }
 
+// Starts a program as the interactive user WITHOUT this process's elevation, via a one-shot scheduled task
+// (limited run level, interactive session). Launching explorer.exe straight from an elevated process would
+// give an elevated shell, which breaks drag and drop, UAC prompts and more.
+static BOOL StartAsUser(LPCWSTR exe, LPCWSTR waitForProcess)
+{
+    WCHAR sys[MAX_PATH], user[256], domain[256], cmd[MAX_PATH * 3];
+    GetSystemDirectoryW(sys, MAX_PATH);
+    GetEnvironmentVariableW(L"USERNAME", user, 256);
+    GetEnvironmentVariableW(L"USERDOMAIN", domain, 256);
+    LPCWSTR task = L"EPAltWeatherStartShell";
+
+    swprintf_s(cmd, MAX_PATH * 3, L"\"%s\\schtasks.exe\" /create /tn %s /tr \"%s\" /sc once /st 23:59 /ru \"%s\\%s\" /rl limited /it /f",
+        sys, task, exe, domain, user);
+    BOOL ok = RunWait(cmd);
+    if (ok)
+    {
+        swprintf_s(cmd, MAX_PATH * 3, L"\"%s\\schtasks.exe\" /run /tn %s", sys, task);
+        ok = RunWait(cmd);
+    }
+    for (int i = 0; ok && i < 30; i++)   // the task starts the program asynchronously
+    {
+        if (ProcessRunning(waitForProcess)) break;
+        Sleep(500);
+    }
+    swprintf_s(cmd, MAX_PATH * 3, L"\"%s\\schtasks.exe\" /delete /tn %s /f", sys, task);
+    RunWait(cmd);
+    return ok && ProcessRunning(waitForProcess);
+}
+
+static BOOL WaitForProcess(LPCWSTR name, int halfSeconds)
+{
+    for (int i = 0; i < halfSeconds; i++)
+    {
+        if (ProcessRunning(name)) return TRUE;
+        Sleep(500);
+    }
+    return ProcessRunning(name);
+}
+
 static void RestartShell(void)
 {
     int w = KillProcesses(L"dllhost.exe", L"ep_weather_host.dll");
     Log("Stopped %d weather host surrogate(s).", w);
     int e = KillProcesses(L"explorer.exe", NULL);
-    Log("Stopped %d explorer.exe process(es); Windows restarts it automatically.", e);
-    for (int i = 0; i < 30; i++)
-    {
-        Sleep(500);
-        if (ProcessRunning(L"explorer.exe")) { Log("explorer.exe is back."); return; }
-    }
-    Log("WARNING: explorer.exe did not restart on its own. Press Ctrl+Shift+Esc > Run new task > explorer.exe.");
+    Log("Stopped %d explorer.exe process(es).", e);
+    // Windows usually relaunches the shell by itself, but not reliably (it did not on a second restart in testing).
+    if (WaitForProcess(L"explorer.exe", 16)) { Log("explorer.exe was restarted by Windows."); return; }
+    Log("Windows did not restart explorer.exe; starting it.");
+    WCHAR explorer[MAX_PATH];
+    Join(explorer, g_winDir, L"explorer.exe");
+    if (StartAsUser(explorer, L"explorer.exe")) { Log("explorer.exe started."); return; }
+    Log("WARNING: could not start explorer.exe. Press Ctrl+Shift+Esc > Run new task > explorer.exe.");
 }
 
 // ---------------------------------------------------------------------------------------------- install / uninstall
@@ -418,6 +458,12 @@ int wmain(int argc, wchar_t** argv)
         else if (!_wcsicmp(argv[i], L"/uninstall") || !_wcsicmp(argv[i], L"-uninstall")) g_uninstall = TRUE;
 #ifdef ALLOW_SANDBOX
         else if (!_wcsicmp(argv[i], L"/sandbox") && i + 1 < argc) { g_sandbox = TRUE; wcscpy_s(sandbox, MAX_PATH, argv[++i]); }
+        else if (!_wcsicmp(argv[i], L"/spawntest") && i + 2 < argc)   // /spawntest <exe> <process name to wait for>
+        {
+            BOOL r = StartAsUser(argv[i + 1], argv[i + 2]);
+            printf("spawn %s\n", r ? "ok" : "FAILED");
+            return r ? 0 : 1;
+        }
 #endif
         else
         {
