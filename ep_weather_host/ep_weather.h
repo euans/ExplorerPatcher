@@ -85,4 +85,10 @@ DEFINE_GUID(IID_IEPWeather,
 
 #define EP_WEATHER_ICONPACK_MICROSOFT 0
 #define EP_WEATHER_ICONPACK_GOOGLE 1
+
+// Icon sets of the non-Google providers (ep_weather_provider_open.c); chosen separately for the taskbar and the flyout.
+#define EP_WEATHER_OPENICONS_COLOR 0
+#define EP_WEATHER_OPENICONS_WHITE 1
+#define EP_WEATHER_OPENICONS_PIXEL 2
+#define EP_WEATHER_NUM_OPENICONS 3
 #endif

@@ -60,6 +60,8 @@ typedef interface EPWeather
     LONG64 dwDevMode;
     LONG64 dwTextDir;
     LONG64 dwIconPack;
+    LONG64 dwOpenIconsTaskbar; // interlocked, EP_WEATHER_OPENICONS_*
+    LONG64 dwOpenIconsFlyout; // interlocked, EP_WEATHER_OPENICONS_*
     LONG64 dwZoomFactor;
     LONG64 bShowingErrorPage; // interlocked; only meaningful for the providers in ep_weather_provider_open.c
     SRWLOCK lockApiKeys; // protects wszApiKeys
@@ -140,6 +142,7 @@ HRESULT STDMETHODCALLTYPE epw_Weather_SetZoomFactor(EPWeather* _this, LONG64 dwZ
 HRESULT STDMETHODCALLTYPE epw_Weather_GetLastUpdateTime(EPWeather* _this, LPSYSTEMTIME lpLastUpdateTime);
 HRESULT STDMETHODCALLTYPE epw_Weather_SetProvider(EPWeather* _this, LONG64 dwProvider, LONG64 bRefresh);
 HRESULT STDMETHODCALLTYPE epw_Weather_SetApiKey(EPWeather* _this, LONG64 dwProvider, DWORD cbKey, LPCWSTR wszKey);
+HRESULT STDMETHODCALLTYPE epw_Weather_SetOpenIcons(EPWeather* _this, LONG64 dwTaskbar, LONG64 dwFlyout, LONG64 bRefresh);
 
 static const IEPWeatherVtbl IEPWeather_Vtbl = {
     .QueryInterface = epw_Weather_QueryInterface,
@@ -172,6 +175,7 @@ static const IEPWeatherVtbl IEPWeather_Vtbl = {
     .GetLastUpdateTime = epw_Weather_GetLastUpdateTime,
     .SetProvider = epw_Weather_SetProvider,
     .SetApiKey = epw_Weather_SetApiKey,
+    .SetOpenIcons = epw_Weather_SetOpenIcons,
 };
 
 static inline DWORD epw_Weather_GetTextScaleFactor(EPWeather* _this) { return InterlockedAdd64(&_this->dwTextScaleFactor, 0); }

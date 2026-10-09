@@ -21,6 +21,34 @@
 #define IDR_EPW_ICON_SNOW               220
 #define IDR_EPW_ICON_SLEET              221
 
+// white icon set (provider_open\icons\white\*.png)
+#define IDR_EPW_ICON_WHITE_CLEAR_DAY    230
+#define IDR_EPW_ICON_WHITE_CLEAR_NIGHT  231
+#define IDR_EPW_ICON_WHITE_PARTLY_DAY   232
+#define IDR_EPW_ICON_WHITE_PARTLY_NIGHT 233
+#define IDR_EPW_ICON_WHITE_CLOUDY       234
+#define IDR_EPW_ICON_WHITE_FOG          235
+#define IDR_EPW_ICON_WHITE_DRIZZLE      236
+#define IDR_EPW_ICON_WHITE_RAIN         237
+#define IDR_EPW_ICON_WHITE_HEAVY_RAIN   238
+#define IDR_EPW_ICON_WHITE_THUNDER      239
+#define IDR_EPW_ICON_WHITE_SNOW         240
+#define IDR_EPW_ICON_WHITE_SLEET        241
+
+// pixel icon set (provider_open\icons\pixel\*.png)
+#define IDR_EPW_ICON_PIXEL_CLEAR_DAY    250
+#define IDR_EPW_ICON_PIXEL_CLEAR_NIGHT  251
+#define IDR_EPW_ICON_PIXEL_PARTLY_DAY   252
+#define IDR_EPW_ICON_PIXEL_PARTLY_NIGHT 253
+#define IDR_EPW_ICON_PIXEL_CLOUDY       254
+#define IDR_EPW_ICON_PIXEL_FOG          255
+#define IDR_EPW_ICON_PIXEL_DRIZZLE      256
+#define IDR_EPW_ICON_PIXEL_RAIN         257
+#define IDR_EPW_ICON_PIXEL_HEAVY_RAIN   258
+#define IDR_EPW_ICON_PIXEL_THUNDER      259
+#define IDR_EPW_ICON_PIXEL_SNOW         260
+#define IDR_EPW_ICON_PIXEL_SLEET        261
+
 // Next default values for new objects
 //
 #ifdef APSTUDIO_INVOKED

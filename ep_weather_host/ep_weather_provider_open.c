@@ -136,36 +136,40 @@ static LPWSTR epw_Open_LoadText(UINT id)
     return wsz;
 }
 
-// Names must match ICON_KEYS in provider_open\providers.js and the files in provider_open\icons\.
+// Names must match ICON_KEYS in provider_open\providers.js and the files in provider_open\icons\ (the default set)
+// and its white\ and pixel\ subfolders. The ids are indexed by EP_WEATHER_OPENICONS_*.
 static const struct
 {
     LPCWSTR wszName;
-    UINT id;
+    UINT id[EP_WEATHER_NUM_OPENICONS];
 } epw_Open_Icons[] = {
-    { L"clear-day", IDR_EPW_ICON_CLEAR_DAY },
-    { L"clear-night", IDR_EPW_ICON_CLEAR_NIGHT },
-    { L"partly-day", IDR_EPW_ICON_PARTLY_DAY },
-    { L"partly-night", IDR_EPW_ICON_PARTLY_NIGHT },
-    { L"cloudy", IDR_EPW_ICON_CLOUDY },
-    { L"fog", IDR_EPW_ICON_FOG },
-    { L"drizzle", IDR_EPW_ICON_DRIZZLE },
-    { L"rain", IDR_EPW_ICON_RAIN },
-    { L"heavy-rain", IDR_EPW_ICON_HEAVY_RAIN },
-    { L"thunder", IDR_EPW_ICON_THUNDER },
-    { L"snow", IDR_EPW_ICON_SNOW },
-    { L"sleet", IDR_EPW_ICON_SLEET },
+    { L"clear-day", { IDR_EPW_ICON_CLEAR_DAY, IDR_EPW_ICON_WHITE_CLEAR_DAY, IDR_EPW_ICON_PIXEL_CLEAR_DAY } },
+    { L"clear-night", { IDR_EPW_ICON_CLEAR_NIGHT, IDR_EPW_ICON_WHITE_CLEAR_NIGHT, IDR_EPW_ICON_PIXEL_CLEAR_NIGHT } },
+    { L"partly-day", { IDR_EPW_ICON_PARTLY_DAY, IDR_EPW_ICON_WHITE_PARTLY_DAY, IDR_EPW_ICON_PIXEL_PARTLY_DAY } },
+    { L"partly-night", { IDR_EPW_ICON_PARTLY_NIGHT, IDR_EPW_ICON_WHITE_PARTLY_NIGHT, IDR_EPW_ICON_PIXEL_PARTLY_NIGHT } },
+    { L"cloudy", { IDR_EPW_ICON_CLOUDY, IDR_EPW_ICON_WHITE_CLOUDY, IDR_EPW_ICON_PIXEL_CLOUDY } },
+    { L"fog", { IDR_EPW_ICON_FOG, IDR_EPW_ICON_WHITE_FOG, IDR_EPW_ICON_PIXEL_FOG } },
+    { L"drizzle", { IDR_EPW_ICON_DRIZZLE, IDR_EPW_ICON_WHITE_DRIZZLE, IDR_EPW_ICON_PIXEL_DRIZZLE } },
+    { L"rain", { IDR_EPW_ICON_RAIN, IDR_EPW_ICON_WHITE_RAIN, IDR_EPW_ICON_PIXEL_RAIN } },
+    { L"heavy-rain", { IDR_EPW_ICON_HEAVY_RAIN, IDR_EPW_ICON_WHITE_HEAVY_RAIN, IDR_EPW_ICON_PIXEL_HEAVY_RAIN } },
+    { L"thunder", { IDR_EPW_ICON_THUNDER, IDR_EPW_ICON_WHITE_THUNDER, IDR_EPW_ICON_PIXEL_THUNDER } },
+    { L"snow", { IDR_EPW_ICON_SNOW, IDR_EPW_ICON_WHITE_SNOW, IDR_EPW_ICON_PIXEL_SNOW } },
+    { L"sleet", { IDR_EPW_ICON_SLEET, IDR_EPW_ICON_WHITE_SLEET, IDR_EPW_ICON_PIXEL_SLEET } },
 };
 
-static void epw_Open_AppendIcons(EPWBuf* b)
+// Appends `window.<wszVariable>={...}` with the icons of one set as data URIs.
+static void epw_Open_AppendIconSet(EPWBuf* b, LPCWSTR wszVariable, LONG64 dwSet)
 {
-    epw_Buf_AppendZ(b, L"window.EP_ICONS={");
+    epw_Buf_AppendZ(b, L"window.");
+    epw_Buf_AppendZ(b, wszVariable);
+    epw_Buf_AppendZ(b, L"={");
     for (int i = 0; i < ARRAYSIZE(epw_Open_Icons); i++)
     {
         const BYTE* pData = NULL;
         DWORD cbData = 0;
-        if (!epw_Open_GetResource(epw_Open_Icons[i].id, &pData, &cbData))
+        if (!epw_Open_GetResource(epw_Open_Icons[i].id[dwSet], &pData, &cbData))
         {
-            printf("[Open provider] Icon resource %u is missing.\n", epw_Open_Icons[i].id);
+            printf("[Open provider] Icon resource %u is missing.\n", epw_Open_Icons[i].id[dwSet]);
             continue;
         }
         epw_Buf_AppendJsonString(b, epw_Open_Icons[i].wszName);
@@ -174,6 +178,23 @@ static void epw_Open_AppendIcons(EPWBuf* b)
         epw_Buf_AppendZ(b, L"\",");
     }
     epw_Buf_AppendZ(b, L"};\n");
+}
+
+// EP_ICONS is the set shown in the flyout. EP_ICONS_TASKBAR is the set drawn into the taskbar widget; it is left
+// out when it is the same set, and ui.js then reuses EP_ICONS.
+static void epw_Open_AppendIcons(EPWeather* _this, EPWBuf* b)
+{
+    LONG64 dwFlyout = InterlockedAdd64(&_this->dwOpenIconsFlyout, 0);
+    LONG64 dwTaskbar = InterlockedAdd64(&_this->dwOpenIconsTaskbar, 0);
+    if (dwFlyout < 0 || dwFlyout >= EP_WEATHER_NUM_OPENICONS) dwFlyout = EP_WEATHER_OPENICONS_COLOR;
+    if (dwTaskbar < 0 || dwTaskbar >= EP_WEATHER_NUM_OPENICONS) dwTaskbar = EP_WEATHER_OPENICONS_COLOR;
+    epw_Open_AppendIconSet(b, L"EP_ICONS", dwFlyout);
+    if (dwTaskbar != dwFlyout)
+    {
+        epw_Open_AppendIconSet(b, L"EP_ICONS_TASKBAR", dwTaskbar);
+    }
+    // The pixel set is drawn without smoothing so the squares stay sharp at the small taskbar size.
+    epw_Buf_AppendZ(b, dwTaskbar == EP_WEATHER_OPENICONS_PIXEL ? L"window.EP_ICONS_TASKBAR_PIXEL=true;\n" : L"window.EP_ICONS_TASKBAR_PIXEL=false;\n");
 }
 
 static void epw_Open_AppendConfig(EPWeather* _this, EPWBuf* b)
@@ -229,7 +250,7 @@ LPWSTR epw_Open_BuildPage(EPWeather* _this)
             epw_Buf_Append(&b, wszHtml, pMarker - wszHtml);
             epw_Buf_AppendZ(&b, L"<script>\n");
             epw_Open_AppendConfig(_this, &b);
-            epw_Open_AppendIcons(&b);
+            epw_Open_AppendIcons(_this, &b);
             epw_Buf_AppendZ(&b, L"</script>\n<script>\n");
             epw_Buf_AppendZ(&b, wszProviders);
             epw_Buf_AppendZ(&b, L"\n</script>\n<script>\n");

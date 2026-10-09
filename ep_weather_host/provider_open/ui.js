@@ -3,7 +3,9 @@
  *
  * ep_weather_host injects, before this script runs:
  *   window.EP_CFG   { provider, term, lang, unit: 'C'|'F', apiKey, geo, iconSize, textScale }
- *   window.EP_ICONS { '<icon key>': 'data:image/png;base64,...' }
+ *   window.EP_ICONS { '<icon key>': 'data:image/png;base64,...' }     icons shown in the flyout
+ *   window.EP_ICONS_TASKBAR                                           icons for the taskbar widget (absent = same as EP_ICONS)
+ *   window.EP_ICONS_TASKBAR_PIXEL                                     true = draw the taskbar icon without smoothing
  * and then polls window.ep_weather_poll() until it stops returning "ep_pending". Possible results:
  *   "ep_pending"                         still working
  *   "ep_error:<kind>:<message>"          could not get data -> host shows its generic error page
@@ -15,6 +17,7 @@
     'use strict';
     const cfg = window.EP_CFG;
     const icons = window.EP_ICONS || {};
+    const taskbarIcons = window.EP_ICONS_TASKBAR || icons;
     const $ = (id) => document.getElementById(id);
     const PAGE_HEIGHT = 367;            // the host maps this to its fixed flyout height (EP_WEATHER_HEIGHT)
     const WATCHDOG_MS = 45000;
@@ -141,12 +144,13 @@
 
     async function iconHex(key, size) {
         const img = new Image();
-        img.src = icons[key] || icons.cloudy;
+        img.src = taskbarIcons[key] || taskbarIcons.cloudy;
         await img.decode();
         const canvas = document.createElement('canvas');
         canvas.width = canvas.height = size;
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        ctx.imageSmoothingEnabled = true;
+        // Pixel art is scaled with nearest neighbour so the squares stay sharp.
+        ctx.imageSmoothingEnabled = !window.EP_ICONS_TASKBAR_PIXEL;
         ctx.imageSmoothingQuality = 'high';
         ctx.drawImage(img, 0, 0, size, size);
         const px = ctx.getImageData(0, 0, size, size).data;

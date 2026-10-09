@@ -330,6 +330,11 @@ BEGIN
     IDS_WEATHER_APIKEY_NONE     "Not set"
     IDS_WEATHER_APIKEY_WAPI     "WeatherAPI.com API key"
     IDS_WEATHER_APIKEY_WAPI_PROMPT "Paste your WeatherAPI.com API key (a free key is available at weatherapi.com). It is only used when ""WeatherAPI.com"" is the selected weather source, and it is stored in your user registry."
+    IDS_WEATHER_OPENICONS_TASKBAR "Taskbar icons (non-Google sources)"
+    IDS_WEATHER_OPENICONS_0     "Colorful (default)"
+    IDS_WEATHER_OPENICONS_1     "White"
+    IDS_WEATHER_OPENICONS_2     "Pixel (8-bit)"
+    IDS_WEATHER_OPENICONS_FLYOUT "Flyout icons (non-Google sources)"
 
     IDS_SP                      "Spotlight"
 

@@ -135,6 +135,9 @@ DWORD dwWeatherToLeft = 0;
 DWORD dwWeatherContentsMode = 0;
 DWORD dwWeatherZoomFactor = 0;
 DWORD dwWeatherProvider = EP_WEATHER_PROVIDER_GOOGLE;
+// Icon sets (EP_WEATHER_OPENICONS_*) used by the non-Google providers, for the taskbar widget and for the flyout.
+DWORD dwWeatherOpenIconsTaskbar = EP_WEATHER_OPENICONS_COLOR;
+DWORD dwWeatherOpenIconsFlyout = EP_WEATHER_OPENICONS_COLOR;
 // API keys of the weather providers that need one, indexed by provider id. Stored in the registry (see below),
 // entered through the Weather page of the settings.
 WCHAR wszWeatherApiKeys[EP_WEATHER_NUM_PROVIDERS][MAX_PATH];
@@ -4278,6 +4281,7 @@ SIZE WINAPI PeopleButton_CalculateMinimumSizeHook(void* _this, SIZE* pSz)
                     epw->lpVtbl->SetLanguage(epw, MAX_PATH * sizeof(WCHAR), wszWeatherLanguage);
                     epw->lpVtbl->SetDevMode(epw, dwWeatherDevMode, FALSE);
                     epw->lpVtbl->SetIconPack(epw, dwWeatherIconPack, FALSE);
+                    epw->lpVtbl->SetOpenIcons(epw, dwWeatherOpenIconsTaskbar, dwWeatherOpenIconsFlyout, FALSE);
                     for (int i = 0; i < ARRAYSIZE(WeatherApiKeyValues); i++)
                     {
                         epw->lpVtbl->SetApiKey(epw, WeatherApiKeyValues[i].dwProvider, MAX_PATH * sizeof(WCHAR), wszWeatherApiKeys[WeatherApiKeyValues[i].dwProvider]);
@@ -6609,6 +6613,25 @@ void WINAPI LoadSettings(LPARAM lParam)
             {
                 epw->lpVtbl->SetIconPack(epw, (LONG64)dwWeatherIconPack, TRUE);
             }
+        }
+
+        DWORD dwOldWeatherOpenIconsTaskbar = dwWeatherOpenIconsTaskbar;
+        DWORD dwOldWeatherOpenIconsFlyout = dwWeatherOpenIconsFlyout;
+        dwSize = sizeof(DWORD);
+        if (RegQueryValueExW(hKey, TEXT("WeatherOpenIconsTaskbar"), 0, NULL, &dwWeatherOpenIconsTaskbar, &dwSize) != ERROR_SUCCESS
+            || dwWeatherOpenIconsTaskbar >= EP_WEATHER_NUM_OPENICONS)
+        {
+            dwWeatherOpenIconsTaskbar = EP_WEATHER_OPENICONS_COLOR;
+        }
+        dwSize = sizeof(DWORD);
+        if (RegQueryValueExW(hKey, TEXT("WeatherOpenIconsFlyout"), 0, NULL, &dwWeatherOpenIconsFlyout, &dwSize) != ERROR_SUCCESS
+            || dwWeatherOpenIconsFlyout >= EP_WEATHER_NUM_OPENICONS)
+        {
+            dwWeatherOpenIconsFlyout = EP_WEATHER_OPENICONS_COLOR;
+        }
+        if ((dwWeatherOpenIconsTaskbar != dwOldWeatherOpenIconsTaskbar || dwWeatherOpenIconsFlyout != dwOldWeatherOpenIconsFlyout) && epw)
+        {
+            epw->lpVtbl->SetOpenIcons(epw, (LONG64)dwWeatherOpenIconsTaskbar, (LONG64)dwWeatherOpenIconsFlyout, TRUE);
         }
 
         DWORD dwOldWeatherToLeft = dwWeatherToLeft;

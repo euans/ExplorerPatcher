@@ -105,6 +105,32 @@ IDR_EPW_ICON_THUNDER        RCDATA  "provider_open\\icons\\thunder.png"
 IDR_EPW_ICON_SNOW           RCDATA  "provider_open\\icons\\snow.png"
 IDR_EPW_ICON_SLEET          RCDATA  "provider_open\\icons\\sleet.png"
 
+IDR_EPW_ICON_WHITE_CLEAR_DAY    RCDATA  "provider_open\\icons\\white\\clear-day.png"
+IDR_EPW_ICON_WHITE_CLEAR_NIGHT  RCDATA  "provider_open\\icons\\white\\clear-night.png"
+IDR_EPW_ICON_WHITE_PARTLY_DAY   RCDATA  "provider_open\\icons\\white\\partly-day.png"
+IDR_EPW_ICON_WHITE_PARTLY_NIGHT RCDATA  "provider_open\\icons\\white\\partly-night.png"
+IDR_EPW_ICON_WHITE_CLOUDY       RCDATA  "provider_open\\icons\\white\\cloudy.png"
+IDR_EPW_ICON_WHITE_FOG          RCDATA  "provider_open\\icons\\white\\fog.png"
+IDR_EPW_ICON_WHITE_DRIZZLE      RCDATA  "provider_open\\icons\\white\\drizzle.png"
+IDR_EPW_ICON_WHITE_RAIN         RCDATA  "provider_open\\icons\\white\\rain.png"
+IDR_EPW_ICON_WHITE_HEAVY_RAIN   RCDATA  "provider_open\\icons\\white\\heavy-rain.png"
+IDR_EPW_ICON_WHITE_THUNDER      RCDATA  "provider_open\\icons\\white\\thunder.png"
+IDR_EPW_ICON_WHITE_SNOW         RCDATA  "provider_open\\icons\\white\\snow.png"
+IDR_EPW_ICON_WHITE_SLEET        RCDATA  "provider_open\\icons\\white\\sleet.png"
+
+IDR_EPW_ICON_PIXEL_CLEAR_DAY    RCDATA  "provider_open\\icons\\pixel\\clear-day.png"
+IDR_EPW_ICON_PIXEL_CLEAR_NIGHT  RCDATA  "provider_open\\icons\\pixel\\clear-night.png"
+IDR_EPW_ICON_PIXEL_PARTLY_DAY   RCDATA  "provider_open\\icons\\pixel\\partly-day.png"
+IDR_EPW_ICON_PIXEL_PARTLY_NIGHT RCDATA  "provider_open\\icons\\pixel\\partly-night.png"
+IDR_EPW_ICON_PIXEL_CLOUDY       RCDATA  "provider_open\\icons\\pixel\\cloudy.png"
+IDR_EPW_ICON_PIXEL_FOG          RCDATA  "provider_open\\icons\\pixel\\fog.png"
+IDR_EPW_ICON_PIXEL_DRIZZLE      RCDATA  "provider_open\\icons\\pixel\\drizzle.png"
+IDR_EPW_ICON_PIXEL_RAIN         RCDATA  "provider_open\\icons\\pixel\\rain.png"
+IDR_EPW_ICON_PIXEL_HEAVY_RAIN   RCDATA  "provider_open\\icons\\pixel\\heavy-rain.png"
+IDR_EPW_ICON_PIXEL_THUNDER      RCDATA  "provider_open\\icons\\pixel\\thunder.png"
+IDR_EPW_ICON_PIXEL_SNOW         RCDATA  "provider_open\\icons\\pixel\\snow.png"
+IDR_EPW_ICON_PIXEL_SLEET        RCDATA  "provider_open\\icons\\pixel\\sleet.png"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

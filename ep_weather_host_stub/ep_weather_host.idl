@@ -91,4 +91,6 @@ import "unknwn.idl";
 	HRESULT SetProvider([in] LONG64 dwProvider, [in] LONG64 bRefresh);
 
 	HRESULT SetApiKey([in] LONG64 dwProvider, [in] DWORD cbKey, [in, size_is(cbKey)] BYTE* wszKey);
+
+	HRESULT SetOpenIcons([in] LONG64 dwTaskbar, [in] LONG64 dwFlyout, [in] LONG64 bRefresh);
 };

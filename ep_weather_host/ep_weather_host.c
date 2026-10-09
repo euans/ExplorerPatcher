@@ -1497,6 +1497,24 @@ HRESULT STDMETHODCALLTYPE epw_Weather_SetApiKey(EPWeather* _this, LONG64 dwProvi
     return S_OK;
 }
 
+// Chooses the icon sets of the non-Google providers: one for the taskbar widget, one for the flyout. The page is
+// rebuilt on a refresh because the sets are embedded in it.
+HRESULT STDMETHODCALLTYPE epw_Weather_SetOpenIcons(EPWeather* _this, LONG64 dwTaskbar, LONG64 dwFlyout, LONG64 bRefresh)
+{
+    if (dwTaskbar < 0 || dwTaskbar >= EP_WEATHER_NUM_OPENICONS || dwFlyout < 0 || dwFlyout >= EP_WEATHER_NUM_OPENICONS)
+    {
+        return E_INVALIDARG;
+    }
+    LONG64 dwOldTaskbar = InterlockedExchange64(&_this->dwOpenIconsTaskbar, dwTaskbar);
+    LONG64 dwOldFlyout = InterlockedExchange64(&_this->dwOpenIconsFlyout, dwFlyout);
+    if (bRefresh && (dwOldTaskbar != dwTaskbar || dwOldFlyout != dwFlyout) && _this->hWnd &&
+        EP_WEATHER_IS_OPEN_PROVIDER(InterlockedAdd64(&_this->dwProvider, 0)))
+    {
+        PostMessageW(_this->hWnd, EP_WEATHER_WM_FETCH_DATA, 0, 0);
+    }
+    return S_OK;
+}
+
 DWORD WINAPI epw_Weather_MainThread(EPWeather* _this)
 {
     HRESULT hr = S_OK;
