@@ -1,0 +1,1667 @@
+#ifndef _H_UTILITY_H_
+#define _H_UTILITY_H_
+#if __has_include("ep_private.h")
+//#define USE_PRIVATE_INTERFACES
+#endif
+#include <Windows.h>
+#include <stdio.h>
+#include <tchar.h>
+#include <windows.data.xml.dom.h>
+#include <accctrl.h>
+#include <aclapi.h>
+#include <sddl.h>
+#include <Shobjidl.h>
+#include <Shlobj_core.h>
+#include <restartmanager.h>
+#pragma comment(lib, "Rstrtmgr.lib")
+#define _LIBVALINET_INCLUDE_UNIVERSAL
+#ifndef __cplusplus
+#include <valinet/universal/toast/toast.h>
+#endif
+#include "osutility.h"
+#include "queryversion.h"
+#pragma comment(lib, "Psapi.lib")
+#include <activscp.h>
+#include <netlistmgr.h>
+#include <Psapi.h>
+#include <stdbool.h>
+#include "Localization.h"
+
+#include "def.h"
+
+#define WM_MSG_GUI_SECTION WM_USER + 1
+#define WM_MSG_GUI_SECTION_GET 1
+
+#ifdef __cplusplus
+#define EP_INLINE inline
+#else
+#define EP_INLINE
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+DEFINE_GUID(CLSID_ImmersiveShell,
+    0xc2f03a33,
+    0x21f5, 0x47fa, 0xb4, 0xbb,
+    0x15, 0x63, 0x62, 0xa2, 0xf2, 0x39
+);
+
+DEFINE_GUID(IID_OpenControlPanel,
+    0xD11AD862,
+    0x66De, 0x4DF4, 0xBf, 0x6C,
+    0x1F, 0x56, 0x21, 0x99, 0x6A, 0xF1
+);
+
+DEFINE_GUID(CLSID_VBScript,
+    0xB54F3741, 
+    0x5B07, 0x11CF, 0xA4, 0xB0, 
+    0x00, 0xAA, 0x00, 0x4A, 0x55, 0xE8
+);
+
+DEFINE_GUID(CLSID_NetworkListManager,
+    0xDCB00C01, 0x570F, 0x4A9B, 0x8D, 0x69, 0x19, 0x9F, 0xDB, 0xA5, 0x72, 0x3B);
+
+DEFINE_GUID(IID_NetworkListManager,
+    0xDCB00000, 0x570F, 0x4A9B, 0x8D, 0x69, 0x19, 0x9F, 0xDB, 0xA5, 0x72, 0x3B);
+
+typedef struct _TVSD
+{
+    DWORD dwSize;
+    LONG lSignature;
+    DWORD dwFlags;
+    UINT uStuckPlace;
+    SIZE sStuckWidths;
+    RECT rcLastStuck;
+    UINT uLastDpi;
+    int iRowCount;
+} TVSD;
+
+HRESULT FindDesktopFolderView(REFIID riid, void** ppv);
+
+HRESULT GetDesktopAutomationObject(REFIID riid, void** ppv);
+
+HRESULT ShellExecuteFromExplorer(
+    PCWSTR pszFile,
+    PCWSTR pszParameters,
+    PCWSTR pszDirectory,
+    PCWSTR pszOperation,
+    int nShowCmd
+);
+
+void ToggleTaskbarAutohide();
+
+#pragma region "Enable old taskbar"
+typedef interface ITrayUIHost ITrayUIHost;
+
+typedef interface ITrayUI ITrayUI;
+
+DEFINE_GUID(IID_ITrayUI,
+    0x12b454e1,
+    0x6e50, 0x42b8, 0xbc, 0x3e,
+    0xae, 0x7f, 0x54, 0x91, 0x99, 0xd6
+);
+
+DEFINE_GUID(IID_ITrayUIComponent,
+    0x27775f88,
+    0x01d3, 0x46ec, 0xa1, 0xc1,
+    0x64, 0xb4, 0xc0, 0x9b, 0x21, 0x1b
+);
+
+typedef HRESULT(*TrayUI_CreateInstance_t)(ITrayUIHost* host, REFIID riid, void** ppv);
+EP_INLINE TrayUI_CreateInstance_t explorer_TrayUI_CreateInstanceFunc;
+#pragma endregion
+
+inline int FileExistsW(wchar_t* file)
+{
+    WIN32_FIND_DATAW FindFileData;
+    HANDLE handle = FindFirstFileW(file, &FindFileData);
+    int found = handle != INVALID_HANDLE_VALUE;
+    if (found)
+    {
+        FindClose(handle);
+    }
+    return found;
+}
+
+// https://stackoverflow.com/questions/1672677/print-a-guid-variable
+void printf_guid(GUID guid);
+
+#ifdef _DEBUG
+LRESULT CALLBACK BalloonWndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+__declspec(dllexport) int CALLBACK ZZTestBalloon(HWND hWnd, HINSTANCE hInstance, LPSTR lpszCmdLine, int nCmdShow);
+
+__declspec(dllexport) int CALLBACK ZZTestToast(HWND hWnd, HINSTANCE hInstance, LPSTR lpszCmdLine, int nCmdShow);
+#endif
+
+#ifndef EP_BUILD_SETUP
+__declspec(dllexport) int CALLBACK ZZLaunchExplorer(HWND hWnd, HINSTANCE hInstance, LPSTR lpszCmdLine, int nCmdShow);
+
+__declspec(dllexport) int CALLBACK ZZLaunchExplorerDelayed(HWND hWnd, HINSTANCE hInstance, LPSTR lpszCmdLine, int nCmdShow);
+
+__declspec(dllexport) int CALLBACK ZZRestartExplorer(HWND hWnd, HINSTANCE hInstance, LPSTR lpszCmdLine, int nCmdShow);
+#endif
+
+#define MIN(X, Y) (((X) < (Y)) ? (X) : (Y))
+#define MAX(X, Y) (((X) > (Y)) ? (X) : (Y))
+
+typedef LSTATUS (*SHRegGetValueFromHKCUHKLM_t)(
+    PCWSTR pwszKey,
+    PCWSTR pwszValue,
+    int/*SRRF*/ srrfFlags,
+    DWORD* pdwType,
+    void* pvData,
+    DWORD* pcbData
+);
+EP_INLINE SHRegGetValueFromHKCUHKLM_t SHRegGetValueFromHKCUHKLMFunc;
+
+typedef BOOL (*SHRegGetBoolValueFromHKCUHKLM_t)(PCWSTR pszKey, PCWSTR pszValue, BOOL fDefault);
+EP_INLINE SHRegGetBoolValueFromHKCUHKLM_t SHRegGetBoolValueFromHKCUHKLMFunc;
+
+inline LSTATUS SHRegGetValueFromHKCUHKLMWithOpt(
+    PCWSTR pwszKey,
+    PCWSTR pwszValue,
+    REGSAM samDesired,
+    void* pvData,
+    DWORD* pcbData
+)
+{
+    LSTATUS lRes = ERROR_FILE_NOT_FOUND;
+    HKEY hKey = NULL;
+
+    RegOpenKeyExW(
+        HKEY_CURRENT_USER,
+        pwszKey,
+        0,
+        samDesired,
+        &hKey
+    );
+    if (hKey == NULL || hKey == INVALID_HANDLE_VALUE)
+    {
+        hKey = NULL;
+    }
+    if (hKey)
+    {
+        lRes = RegQueryValueExW(
+            hKey,
+            pwszValue,
+            0,
+            NULL,
+            (LPBYTE)pvData,
+            pcbData
+        );
+        RegCloseKey(hKey);
+        if (lRes == ERROR_SUCCESS || lRes == ERROR_MORE_DATA)
+        {
+            return lRes;
+        }
+    }
+    RegOpenKeyExW(
+        HKEY_LOCAL_MACHINE,
+        pwszKey,
+        0,
+        samDesired,
+        &hKey
+    );
+    if (hKey == NULL || hKey == INVALID_HANDLE_VALUE)
+    {
+        hKey = NULL;
+    }
+    if (hKey)
+    {
+        lRes = RegQueryValueExW(
+            hKey,
+            pwszValue,
+            0,
+            NULL,
+            (LPBYTE)pvData,
+            pcbData
+        );
+        RegCloseKey(hKey);
+        if (lRes == ERROR_SUCCESS || lRes == ERROR_MORE_DATA)
+        {
+            return lRes;
+        }
+    }
+    return lRes;
+}
+
+EP_INLINE HWND(WINAPI* CreateWindowInBand)(
+    _In_ DWORD dwExStyle,
+    _In_opt_ LPCWSTR lpClassName,
+    _In_opt_ LPCWSTR lpWindowName,
+    _In_ DWORD dwStyle,
+    _In_ int X,
+    _In_ int Y,
+    _In_ int nWidth,
+    _In_ int nHeight,
+    _In_opt_ HWND hWndParent,
+    _In_opt_ HMENU hMenu,
+    _In_opt_ HINSTANCE hInstance,
+    _In_opt_ LPVOID lpParam,
+    DWORD band
+);
+
+EP_INLINE BOOL(WINAPI* GetWindowBand)(HWND hWnd, PDWORD pdwBand);
+
+EP_INLINE BOOL(WINAPI* SetWindowBand)(HWND hWnd, HWND hwndInsertAfter, DWORD dwBand);
+
+EP_INLINE INT64(*SetWindowCompositionAttribute)(HWND, void*);
+
+// uxtheme.dll private functions
+
+typedef enum IMMERSIVE_COLOR_TYPE
+{
+    // Defining only used ones
+    IMCLR_SystemAccentLight2 = 2,
+    IMCLR_SystemAccentDark2 = 6
+} IMMERSIVE_COLOR_TYPE;
+
+typedef struct IMMERSIVE_COLOR_PREFERENCE
+{
+    DWORD crStartColor;
+    DWORD crAccentColor;
+} IMMERSIVE_COLOR_PREFERENCE;
+
+typedef enum IMMERSIVE_HC_CACHE_MODE
+{
+    IHCM_USE_CACHED_VALUE = 0,
+    IHCM_REFRESH = 1
+} IMMERSIVE_HC_CACHE_MODE;
+
+typedef void(*GetThemeName_t)(void*, void*, void*); // 74
+EP_INLINE GetThemeName_t GetThemeName;
+
+typedef bool(*RefreshImmersiveColorPolicyState_t)(); // 104
+EP_INLINE RefreshImmersiveColorPolicyState_t RefreshImmersiveColorPolicyState;
+
+typedef bool(*GetIsImmersiveColorUsingHighContrast_t)(IMMERSIVE_HC_CACHE_MODE); // 106
+EP_INLINE GetIsImmersiveColorUsingHighContrast_t GetIsImmersiveColorUsingHighContrast;
+
+typedef HRESULT(*GetUserColorPreference_t)(IMMERSIVE_COLOR_PREFERENCE*, bool); // 120
+EP_INLINE GetUserColorPreference_t GetUserColorPreference;
+
+typedef DWORD(*GetColorFromPreference_t)(const IMMERSIVE_COLOR_PREFERENCE*, IMMERSIVE_COLOR_TYPE, bool, IMMERSIVE_HC_CACHE_MODE); // 121
+EP_INLINE GetColorFromPreference_t GetColorFromPreference;
+
+typedef bool(*ShouldAppsUseDarkMode_t)(); // 132
+EP_INLINE ShouldAppsUseDarkMode_t ShouldAppsUseDarkMode;
+
+typedef void(*AllowDarkModeForWindow_t)(HWND hWnd, BOOL bAllowDark); // 133
+EP_INLINE AllowDarkModeForWindow_t AllowDarkModeForWindow;
+
+typedef void(*SetPreferredAppMode_t)(BOOL bAllowDark); // 135
+EP_INLINE SetPreferredAppMode_t SetPreferredAppMode;
+
+typedef bool(*ShouldSystemUseDarkMode_t)(); // 138
+EP_INLINE ShouldSystemUseDarkMode_t ShouldSystemUseDarkMode;
+
+void* ReadFromFile(wchar_t* wszFileName, DWORD* dwSize);
+
+int ComputeFileHash(LPCWSTR filename, LPSTR hash, DWORD dwHash);
+
+int ComputeFileHash2(HMODULE hModule, LPCWSTR filename, LPSTR hash, DWORD dwHash);
+
+void GetHardcodedHash(LPCWSTR wszPath, LPSTR hash, DWORD dwHash);
+
+void LaunchPropertiesGUI(HMODULE hModule);
+
+BOOL SystemShutdown(BOOL reboot);
+
+LSTATUS RegisterDWMService(DWORD dwDesiredState, DWORD dwOverride);
+
+char* StrReplaceAllA(const char* s, const char* oldW, const char* newW, int* dwNewSize);
+
+WCHAR* StrReplaceAllW(const WCHAR* s, const WCHAR* oldW, const WCHAR* newW, int* dwNewSize);
+
+HRESULT InputBox(BOOL bPassword, HWND hWnd, LPCWSTR wszPrompt, LPCWSTR wszTitle, LPCWSTR wszDefault, LPWSTR wszAnswer, DWORD cbAnswer, BOOL* bCancelled);
+
+BOOL GetLogonSid(PSID* ppsid);
+
+BOOL PrepareSecurityDescriptor(PSID pMainSid, DWORD dwMainPermissions, PSID pSecondarySid, DWORD dwSecondayPermissions, PSECURITY_DESCRIPTOR* ppSD);
+
+inline BOOL IsHighContrast()
+{
+    HIGHCONTRASTW highContrast;
+    ZeroMemory(&highContrast, sizeof(HIGHCONTRASTW));
+    highContrast.cbSize = sizeof(highContrast);
+    if (SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(highContrast), &highContrast, FALSE))
+        return highContrast.dwFlags & HCF_HIGHCONTRASTON;
+    return FALSE;
+}
+
+// https://codereview.stackexchange.com/questions/29198/random-string-generator-in-c
+static inline WCHAR* rand_string(WCHAR* str, size_t size)
+{
+    const WCHAR charset[] = L"abcdefghijklmnopqrstuvwxyz";
+    if (size) {
+        --size;
+        for (size_t n = 0; n < size; n++) {
+            int key = rand() % (int)((sizeof(charset) / sizeof(WCHAR)) - 1);
+            str[n] = charset[key];
+        }
+        str[size] = L'\0';
+    }
+    return str;
+}
+
+inline long long milliseconds_now() {
+    LARGE_INTEGER s_frequency;
+    BOOL s_use_qpc = QueryPerformanceFrequency(&s_frequency);
+    if (s_use_qpc) {
+        LARGE_INTEGER now;
+        QueryPerformanceCounter(&now);
+        return (1000LL * now.QuadPart) / s_frequency.QuadPart;
+    }
+    else {
+        return GetTickCount();
+    }
+}
+
+inline BOOL IsAppRunningAsAdminMode()
+{
+    BOOL fIsRunAsAdmin = FALSE;
+    DWORD dwError = ERROR_SUCCESS;
+    PSID pAdministratorsGroup = NULL;
+
+    // Allocate and initialize a SID of the administrators group.
+    SID_IDENTIFIER_AUTHORITY NtAuthority = SECURITY_NT_AUTHORITY;
+    if (!AllocateAndInitializeSid(
+        &NtAuthority,
+        2,
+        SECURITY_BUILTIN_DOMAIN_RID,
+        DOMAIN_ALIAS_RID_ADMINS,
+        0, 0, 0, 0, 0, 0,
+        &pAdministratorsGroup))
+    {
+        dwError = GetLastError();
+        goto Cleanup;
+    }
+
+    // Determine whether the SID of administrators group is enabled in 
+    // the primary access token of the process.
+    if (!CheckTokenMembership(NULL, pAdministratorsGroup, &fIsRunAsAdmin))
+    {
+        dwError = GetLastError();
+        goto Cleanup;
+    }
+
+Cleanup:
+    // Centralized cleanup for all allocated resources.
+    if (pAdministratorsGroup)
+    {
+        FreeSid(pAdministratorsGroup);
+        pAdministratorsGroup = NULL;
+    }
+
+    // Throw the error if something failed in the function.
+    if (ERROR_SUCCESS != dwError)
+    {
+        return FALSE;
+    }
+
+    return fIsRunAsAdmin;
+}
+
+inline BOOL IsDesktopWindowAlreadyPresent()
+{
+    return (FindWindowExW(NULL, NULL, L"Progman", NULL) || FindWindowExW(NULL, NULL, L"Proxy Desktop", NULL));
+}
+
+// https://jiangsheng.net/2013/01/22/how-to-restart-windows-explorer-programmatically-using-restart-manager/
+inline RM_UNIQUE_PROCESS GetExplorerApplication()
+{
+    HWND hwnd = FindWindow(L"Shell_TrayWnd", NULL);
+    DWORD pid = 0;
+    GetWindowThreadProcessId(hwnd, &pid);
+
+    RM_UNIQUE_PROCESS out = { 0, { (DWORD)-1, (DWORD)-1 } };
+    DWORD bytesReturned;
+    WCHAR imageName[MAX_PATH]; // process image name buffer
+    DWORD processIds[2048]; // max 2048 processes (more than enough)
+
+    // enumerate all running processes (usually around 60-70)
+    EnumProcesses(processIds, sizeof(processIds), &bytesReturned);
+    int count = bytesReturned / sizeof(DWORD); // number of processIds returned
+
+    for (int i = 0; i < count; ++i)
+    {
+        DWORD processId = processIds[i];
+        HANDLE hProc;
+        if (processId == pid && (hProc = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, FALSE, processId)))
+        {
+            GetProcessImageFileNameW(hProc, imageName, MAX_PATH);
+            FILETIME ftStart, ftExit, ftKernel, ftUser;
+            GetProcessTimes(hProc, &ftStart, &ftExit, &ftKernel, &ftUser);
+
+            if (ftStart.dwLowDateTime < out.ProcessStartTime.dwLowDateTime)
+            {
+                out.dwProcessId = processId;
+                out.ProcessStartTime = ftStart;
+            }
+            CloseHandle(hProc);
+        }
+    }
+    return out; // return count in pResults
+}
+
+static DWORD RmSession = -1;
+static wchar_t RmSessionKey[CCH_RM_SESSION_KEY + 1];
+
+// shuts down the explorer and is ready for explorer restart
+inline DWORD WINAPI BeginExplorerRestart(LPVOID lpUnused)
+{
+    if (RmStartSession(&RmSession, 0, RmSessionKey) == ERROR_SUCCESS)
+    {
+        RM_UNIQUE_PROCESS rgApplications[] = { GetExplorerApplication() };
+        RmRegisterResources(RmSession, 0, 0, 1, rgApplications, 0, 0);
+
+        DWORD rebootReason;
+        UINT nProcInfoNeeded, nProcInfo = 16;
+        RM_PROCESS_INFO affectedApps[16];
+        RmGetList(RmSession, &nProcInfoNeeded, &nProcInfo, affectedApps, &rebootReason);
+
+        if (rebootReason == RmRebootReasonNone) // no need for reboot?
+        {
+            // shutdown explorer
+            RmShutdown(RmSession, RmForceShutdown, 0);
+        }
+    }
+    return 0;
+}
+// restarts the explorer
+inline void FinishExplorerRestart()
+{
+    DWORD dwError;
+    if (dwError = RmRestart(RmSession, 0, NULL))
+        printf("\n RmRestart error: %d\n\n", dwError);
+
+    RmEndSession(RmSession);
+    RmSession = -1;
+    RmSessionKey[0] = 0;
+}
+
+// https://stackoverflow.com/questions/5689904/gracefully-exit-explorer-programmatically
+inline BOOL ExitExplorer()
+{
+    HWND hWndTray = FindWindowW(L"Shell_TrayWnd", NULL);
+    return PostMessageW(hWndTray, 0x5B4, 0, 0);
+}
+
+inline void StartExplorerWithDelay(int delay, HANDLE userToken)
+{
+    WCHAR wszPath[MAX_PATH];
+    ZeroMemory(wszPath, MAX_PATH * sizeof(WCHAR));
+    GetWindowsDirectoryW(wszPath, MAX_PATH);
+    wcscat_s(wszPath, MAX_PATH, L"\\explorer.exe");
+    Sleep(delay);
+    if (userToken != INVALID_HANDLE_VALUE)
+    {
+        HANDLE primaryUserToken = INVALID_HANDLE_VALUE;
+        if (ImpersonateLoggedOnUser(userToken))
+        {
+            DuplicateTokenEx(userToken, MAXIMUM_ALLOWED, NULL, SecurityImpersonation, TokenPrimary, &primaryUserToken);
+            RevertToSelf();
+        }
+        if (primaryUserToken != INVALID_HANDLE_VALUE)
+        {
+            PROCESS_INFORMATION processInfo;
+            ZeroMemory(&processInfo, sizeof(processInfo));
+            STARTUPINFOW startupInfo;
+            ZeroMemory(&startupInfo, sizeof(startupInfo));
+            startupInfo.cb = sizeof(startupInfo);
+            BOOL processCreated = CreateProcessWithTokenW(
+                primaryUserToken, LOGON_WITH_PROFILE, wszPath, NULL, 0, NULL, NULL, &startupInfo, &processInfo) != 0;
+            CloseHandle(primaryUserToken);
+            if (processInfo.hProcess != INVALID_HANDLE_VALUE)
+            {
+                CloseHandle(processInfo.hProcess);
+            }
+            if (processInfo.hThread != INVALID_HANDLE_VALUE)
+            {
+                CloseHandle(processInfo.hThread);
+            }
+            if (processCreated)
+            {
+                return;
+            }
+        }
+    }
+    ShellExecuteW(
+        NULL,
+        L"open",
+        wszPath,
+        NULL,
+        NULL,
+        SW_SHOWNORMAL
+    );
+}
+
+inline void StartExplorer()
+{
+
+    /*PROCESSENTRY32 pe32 = {0};
+    pe32.dwSize = sizeof(PROCESSENTRY32);
+    HANDLE hSnapshot = CreateToolhelp32Snapshot(
+        TH32CS_SNAPPROCESS,
+        0
+    );
+    if (Process32First(hSnapshot, &pe32) == TRUE)
+    {
+        do
+        {
+            if (!wcscmp(pe32.szExeFile, TEXT("explorer.exe")))
+            {
+                HANDLE hSihost = OpenProcess(
+                    PROCESS_TERMINATE,
+                    FALSE,
+                    pe32.th32ProcessID
+                );
+                TerminateProcess(hSihost, 1);
+                CloseHandle(hSihost);
+            }
+        } while (Process32Next(hSnapshot, &pe32) == TRUE);
+    }
+    CloseHandle(hSnapshot);
+    */
+    wchar_t wszPath[MAX_PATH];
+    ZeroMemory(
+        wszPath,
+        (MAX_PATH) * sizeof(wchar_t)
+    );
+    GetWindowsDirectoryW(
+        wszPath,
+        MAX_PATH
+    );
+    wcscat_s(
+        wszPath,
+        MAX_PATH,
+        L"\\explorer.exe"
+    );
+    STARTUPINFO si;
+    ZeroMemory(&si, sizeof(STARTUPINFO));
+    si.cb = sizeof(si);
+    PROCESS_INFORMATION pi;
+    ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+    if (CreateProcessW(
+        NULL,
+        wszPath,
+        NULL,
+        NULL,
+        TRUE,
+        CREATE_UNICODE_ENVIRONMENT,
+        NULL,
+        NULL,
+        &si,
+        &pi
+    ))
+    {
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+    }
+}
+
+inline BOOL IncrementDLLReferenceCount(HINSTANCE hinst)
+{
+    HMODULE hMod;
+    GetModuleHandleExW(
+        GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+        (LPCWSTR)hinst,
+        &hMod);
+    return TRUE;
+}
+
+inline void REPLACE_VTABLE_ENTRY_Helper(void** vtable, int index, void* hookFunc, void** originalFunc)
+{
+    void** ppfn = &vtable[index];
+    if (*ppfn != hookFunc)
+    {
+        *originalFunc = *ppfn;
+        DWORD dwOldProtect;
+        if (VirtualProtect(ppfn, sizeof(void*), PAGE_EXECUTE_READWRITE, &dwOldProtect))
+        {
+            *ppfn = hookFunc;
+            VirtualProtect(ppfn, sizeof(void*), dwOldProtect, &dwOldProtect);
+        }
+    }
+}
+
+// Before using this, please make sure that the vtable is in the real module not a stub.
+#define REPLACE_VTABLE_ENTRY(vtable, index, name) \
+    REPLACE_VTABLE_ENTRY_Helper(vtable, index, (void*)name##Hook, (void**)&name##Func)
+
+UINT_PTR RVAToFileOffset(PBYTE pBase, UINT_PTR rva);
+
+inline BOOL SectionBeginAndSizeEx64(
+    const IMAGE_DOS_HEADER* dosHeader, const IMAGE_NT_HEADERS64* ntHeader, const char* pszSectionName,
+    PBYTE* beginSection, DWORD* sizeSection)
+{
+    *beginSection = NULL;
+    *sizeSection = 0;
+
+    PIMAGE_SECTION_HEADER firstSection = IMAGE_FIRST_SECTION(ntHeader);
+    for (unsigned int i = 0; i < ntHeader->FileHeader.NumberOfSections; ++i)
+    {
+        PIMAGE_SECTION_HEADER section = firstSection + i;
+        if (strncmp((const char*)section->Name, pszSectionName, IMAGE_SIZEOF_SHORT_NAME) == 0)
+        {
+            *beginSection = (PBYTE)dosHeader + section->VirtualAddress;
+            *sizeSection = section->Misc.VirtualSize;
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+inline BOOL SectionBeginAndSizePEFileEx64(
+    const IMAGE_DOS_HEADER* dosHeader, const IMAGE_NT_HEADERS64* ntHeader, const char* pszSectionName,
+    PBYTE* beginSection, DWORD* sizeSection)
+{
+    *beginSection = NULL;
+    *sizeSection = 0;
+
+    PIMAGE_SECTION_HEADER firstSection = IMAGE_FIRST_SECTION(ntHeader);
+    for (unsigned int i = 0; i < ntHeader->FileHeader.NumberOfSections; ++i)
+    {
+        PIMAGE_SECTION_HEADER section = firstSection + i;
+        if (strncmp((const char*)section->Name, pszSectionName, IMAGE_SIZEOF_SHORT_NAME) == 0)
+        {
+            *beginSection = (PBYTE)dosHeader + section->PointerToRawData;
+            *sizeSection = section->SizeOfRawData;
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+inline BOOL SectionBeginAndSize(HMODULE hModule, const char* pszSectionName, PBYTE* beginSection, DWORD* sizeSection)
+{
+    *beginSection = NULL;
+    *sizeSection = 0;
+
+    PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)hModule;
+    if (dosHeader->e_magic == IMAGE_DOS_SIGNATURE)
+    {
+        PIMAGE_NT_HEADERS64 ntHeader = (PIMAGE_NT_HEADERS64)((BYTE*)dosHeader + dosHeader->e_lfanew);
+        if (ntHeader->Signature == IMAGE_NT_SIGNATURE && ntHeader->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+        {
+            return SectionBeginAndSizeEx64(dosHeader, ntHeader, pszSectionName, beginSection, sizeSection);
+        }
+    }
+
+    return FALSE;
+}
+
+inline BOOL SectionBeginAndSizePEFile(
+    PBYTE pFileBase, DWORD fileSize, const char* pszSectionName, PBYTE* beginSection, DWORD* sizeSection)
+{
+    *beginSection = NULL;
+    *sizeSection = 0;
+
+    PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)pFileBase;
+    if (dosHeader->e_magic == IMAGE_DOS_SIGNATURE)
+    {
+        PIMAGE_NT_HEADERS64 ntHeader = (PIMAGE_NT_HEADERS64)(pFileBase + dosHeader->e_lfanew);
+        if (ntHeader->Signature == IMAGE_NT_SIGNATURE && ntHeader->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+        {
+            return SectionBeginAndSizePEFileEx64(dosHeader, ntHeader, pszSectionName, beginSection, sizeSection);
+        }
+    }
+
+    return FALSE;
+}
+
+typedef struct _EP_IMAGE_CHPE_RANGE_ENTRY
+{
+    union
+    {
+        ULONG StartOffset;
+        struct
+        {
+            ULONG NativeCode : 1;
+            ULONG AddressBits : 31;
+        } DUMMYSTRUCTNAME;
+    } DUMMYUNIONNAME;
+    ULONG Length;
+} EP_IMAGE_CHPE_RANGE_ENTRY, *PEP_IMAGE_CHPE_RANGE_ENTRY;
+
+typedef struct _EP_IMAGE_ARM64EC_METADATA
+{
+    ULONG  Version;
+    ULONG  CodeMap;
+    ULONG  CodeMapCount;
+    ULONG  CodeRangesToEntryPoints;
+    ULONG  RedirectionMetadata;
+    ULONG  __os_arm64x_dispatch_call_no_redirect;
+    ULONG  __os_arm64x_dispatch_ret;
+    ULONG  __os_arm64x_dispatch_call;
+    ULONG  __os_arm64x_dispatch_icall;
+    ULONG  __os_arm64x_dispatch_icall_cfg;
+    ULONG  AlternateEntryPoint;
+    ULONG  AuxiliaryIAT;
+    ULONG  CodeRangesToEntryPointsCount;
+    ULONG  RedirectionMetadataCount;
+    ULONG  GetX64InformationFunctionPointer;
+    ULONG  SetX64InformationFunctionPointer;
+    ULONG  ExtraRFETable;
+    ULONG  ExtraRFETableSize;
+    ULONG  __os_arm64x_dispatch_fptr;
+    ULONG  AuxiliaryIATCopy;
+} EP_IMAGE_ARM64EC_METADATA;
+
+// https://github.com/ramensoftware/windhawk/blob/03963d65e7077b761e5295defc2ccd5378e650a2/src/windhawk/engine/symbol_enum.cpp#L251
+inline BOOL GetChpeRanges64(
+    const IMAGE_DOS_HEADER* dosHeader, const IMAGE_NT_HEADERS64* ntHeader,
+    const EP_IMAGE_CHPE_RANGE_ENTRY** prgRanges, ULONG* pcRanges)
+{
+    *prgRanges = NULL;
+    *pcRanges = 0;
+    const IMAGE_OPTIONAL_HEADER64* opt = &ntHeader->OptionalHeader;
+
+    if (opt->NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG
+        || !opt->DataDirectory[IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG].VirtualAddress)
+    {
+        return FALSE;
+    }
+
+    DWORD directorySize = opt->DataDirectory[IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG].Size;
+
+    const IMAGE_LOAD_CONFIG_DIRECTORY64* cfg = (const IMAGE_LOAD_CONFIG_DIRECTORY64*)(
+        (const char*)dosHeader + opt->DataDirectory[IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG].VirtualAddress);
+
+    const DWORD kMinSize = offsetof(IMAGE_LOAD_CONFIG_DIRECTORY64, CHPEMetadataPointer)
+        + sizeof(ULONGLONG);
+
+    if (directorySize < kMinSize || cfg->Size < kMinSize)
+    {
+        return FALSE;
+    }
+
+    if (!cfg->CHPEMetadataPointer)
+    {
+        return FALSE;
+    }
+
+    // Either IMAGE_CHPE_METADATA_X86 or EP_IMAGE_ARM64EC_METADATA.
+    const EP_IMAGE_ARM64EC_METADATA* metadata = (const EP_IMAGE_ARM64EC_METADATA*)(
+        (const char*)dosHeader + cfg->CHPEMetadataPointer - opt->ImageBase);
+
+    const EP_IMAGE_CHPE_RANGE_ENTRY* codeMap = (const EP_IMAGE_CHPE_RANGE_ENTRY*)(
+        (const char*)dosHeader + metadata->CodeMap);
+
+    *prgRanges = codeMap;
+    *pcRanges = metadata->CodeMapCount;
+    return TRUE;
+}
+
+inline BOOL GetChpeRangesPEFile64(
+    DWORD fileSize,
+    const IMAGE_DOS_HEADER* dosHeader, const IMAGE_NT_HEADERS64* ntHeader,
+    const EP_IMAGE_CHPE_RANGE_ENTRY** prgRanges, ULONG* pcRanges)
+{
+    *prgRanges = NULL;
+    *pcRanges = 0;
+    const IMAGE_OPTIONAL_HEADER64* opt = &ntHeader->OptionalHeader;
+
+    if (opt->NumberOfRvaAndSizes <= IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG
+        || !opt->DataDirectory[IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG].VirtualAddress)
+    {
+        return FALSE;
+    }
+
+    DWORD directorySize = opt->DataDirectory[IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG].Size;
+
+    UINT_PTR directoryOffset = RVAToFileOffset((PBYTE)dosHeader, opt->DataDirectory[IMAGE_DIRECTORY_ENTRY_LOAD_CONFIG].VirtualAddress);
+    if (!directoryOffset || directoryOffset + sizeof(IMAGE_LOAD_CONFIG_DIRECTORY64) > fileSize)
+    {
+        return FALSE;
+    }
+
+    const IMAGE_LOAD_CONFIG_DIRECTORY64* cfg = (const IMAGE_LOAD_CONFIG_DIRECTORY64*)(
+        (const char*)dosHeader + directoryOffset);
+
+    const DWORD kMinSize = offsetof(IMAGE_LOAD_CONFIG_DIRECTORY64, CHPEMetadataPointer)
+        + sizeof(ULONGLONG);
+
+    if (directorySize < kMinSize || cfg->Size < kMinSize)
+    {
+        return FALSE;
+    }
+
+    if (!cfg->CHPEMetadataPointer)
+    {
+        return FALSE;
+    }
+
+    UINT_PTR metadataOffset = RVAToFileOffset((PBYTE)dosHeader, cfg->CHPEMetadataPointer - opt->ImageBase);
+    if (!metadataOffset || metadataOffset + sizeof(EP_IMAGE_ARM64EC_METADATA) > fileSize)
+    {
+        return FALSE;
+    }
+
+    // Either IMAGE_CHPE_METADATA_X86 or EP_IMAGE_ARM64EC_METADATA.
+    const EP_IMAGE_ARM64EC_METADATA* metadata = (const EP_IMAGE_ARM64EC_METADATA*)(
+        (const char*)dosHeader + metadataOffset);
+
+    UINT_PTR codeMapOffset = RVAToFileOffset((PBYTE)dosHeader, metadata->CodeMap);
+    if (!codeMapOffset || codeMapOffset + sizeof(EP_IMAGE_CHPE_RANGE_ENTRY) * metadata->CodeMapCount > fileSize)
+    {
+        return FALSE;
+    }
+
+    const EP_IMAGE_CHPE_RANGE_ENTRY* codeMap = (const EP_IMAGE_CHPE_RANGE_ENTRY*)(
+        (const char*)dosHeader + codeMapOffset);
+
+    *prgRanges = codeMap;
+    *pcRanges = metadata->CodeMapCount;
+    return TRUE;
+}
+
+typedef enum _EP_ChpeCodeRangeType
+{
+    CODERANGE_Arm64,
+    CODERANGE_Arm64EC,
+    CODERANGE_Amd64,
+} EP_ChpeCodeRangeType;
+
+#if defined(_M_ARM64) || defined(_M_ARM64EC)
+inline BOOL TextSectionBeginAndSize(HMODULE hModule, PBYTE* beginSection, DWORD* sizeSection)
+{
+    *beginSection = NULL;
+    *sizeSection = 0;
+
+#if defined(_M_ARM64)
+    const EP_ChpeCodeRangeType appropriateCodeRangeType = CODERANGE_Arm64;
+#elif defined(_M_ARM64EC)
+    const EP_ChpeCodeRangeType appropriateCodeRangeType = CODERANGE_Arm64EC;
+#endif
+
+    PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)hModule;
+    if (dosHeader->e_magic == IMAGE_DOS_SIGNATURE)
+    {
+        PIMAGE_NT_HEADERS64 ntHeader = (PIMAGE_NT_HEADERS64)((BYTE*)dosHeader + dosHeader->e_lfanew);
+        if (ntHeader->Signature == IMAGE_NT_SIGNATURE && ntHeader->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+        {
+            if (!SectionBeginAndSizeEx64(dosHeader, ntHeader, ".text", beginSection, sizeSection))
+                return FALSE;
+
+            // Narrow down the results to the appropriate code range on Arm64X binaries
+            const EP_IMAGE_CHPE_RANGE_ENTRY* rgRanges;
+            ULONG cRanges;
+            if (GetChpeRanges64(dosHeader, ntHeader, &rgRanges, &cRanges))
+            {
+                const EP_IMAGE_CHPE_RANGE_ENTRY* pLast = rgRanges + cRanges;
+                for (const EP_IMAGE_CHPE_RANGE_ENTRY* pCurrent = rgRanges; pCurrent < pLast; ++pCurrent)
+                {
+                    const ULONG typeMask = 3; // 1 for 32 bit
+                    ULONG start = pCurrent->StartOffset & ~typeMask; // RVA
+                    EP_ChpeCodeRangeType type = (EP_ChpeCodeRangeType)(pCurrent->StartOffset & typeMask);
+                    if (type == appropriateCodeRangeType)
+                    {
+                        *beginSection = (PBYTE)hModule + start;
+                        *sizeSection = pCurrent->Length;
+                        break;
+                    }
+                }
+            }
+
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
+inline BOOL TextSectionBeginAndSizePEFile(PBYTE pFileBase, DWORD fileSize, PBYTE* beginSection, DWORD* sizeSection)
+{
+    *beginSection = NULL;
+    *sizeSection = 0;
+
+#if defined(_M_ARM64)
+    const EP_ChpeCodeRangeType appropriateCodeRangeType = CODERANGE_Arm64;
+#elif defined(_M_ARM64EC)
+    const EP_ChpeCodeRangeType appropriateCodeRangeType = CODERANGE_Arm64EC;
+#endif
+
+    PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)pFileBase;
+    if (dosHeader->e_magic == IMAGE_DOS_SIGNATURE)
+    {
+        PIMAGE_NT_HEADERS64 ntHeader = (PIMAGE_NT_HEADERS64)(pFileBase + dosHeader->e_lfanew);
+        if (ntHeader->Signature == IMAGE_NT_SIGNATURE && ntHeader->OptionalHeader.Magic == IMAGE_NT_OPTIONAL_HDR64_MAGIC)
+        {
+            if (!SectionBeginAndSizePEFileEx64(dosHeader, ntHeader, ".text", beginSection, sizeSection))
+                return FALSE;
+
+            // Narrow down the results to the appropriate code range on Arm64X binaries
+            const EP_IMAGE_CHPE_RANGE_ENTRY* rgRanges;
+            ULONG cRanges;
+            if (GetChpeRangesPEFile64(fileSize, dosHeader, ntHeader, &rgRanges, &cRanges))
+            {
+                const EP_IMAGE_CHPE_RANGE_ENTRY* pLast = rgRanges + cRanges;
+                for (const EP_IMAGE_CHPE_RANGE_ENTRY* pCurrent = rgRanges; pCurrent < pLast; ++pCurrent)
+                {
+                    const ULONG typeMask = 3; // 1 for 32 bit
+                    ULONG start = pCurrent->StartOffset & ~typeMask; // RVA
+                    EP_ChpeCodeRangeType type = (EP_ChpeCodeRangeType)(pCurrent->StartOffset & typeMask);
+                    if (type == appropriateCodeRangeType)
+                    {
+                        UINT_PTR offset = RVAToFileOffset(pFileBase, start);
+                        if (offset && offset + pCurrent->Length <= fileSize)
+                        {
+                            *beginSection = (PBYTE)pFileBase + offset;
+                            *sizeSection = pCurrent->Length;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+#else
+__forceinline BOOL TextSectionBeginAndSize(HMODULE hModule, PBYTE* beginSection, DWORD* sizeSection)
+{
+    return SectionBeginAndSize(hModule, ".text", beginSection, sizeSection);
+}
+
+__forceinline BOOL TextSectionBeginAndSizePEFile(PBYTE pFileBase, DWORD fileSize, PBYTE* beginSection, DWORD* sizeSection)
+{
+    return SectionBeginAndSizePEFile(pFileBase, fileSize, ".text", beginSection, sizeSection);
+}
+#endif
+
+__forceinline BOOL RDataSectionBeginAndSize(HMODULE hModule, PBYTE* beginSection, DWORD* sizeSection)
+{
+    return SectionBeginAndSize(hModule, ".rdata", beginSection, sizeSection);
+}
+
+__forceinline BOOL RDataSectionBeginAndSizePEFile(PBYTE pFileBase, DWORD fileSize, PBYTE* beginSection, DWORD* sizeSection)
+{
+    return SectionBeginAndSizePEFile(pFileBase, fileSize, ".rdata", beginSection, sizeSection);
+}
+
+#if _M_X64
+inline BOOL FollowJump(PBYTE pInstr, BYTE shortOpcode, BYTE longOpcodeExt, DWORD* pInstrSize, PBYTE* pTarget)
+{
+    // Check long
+    if (pInstr[0] == 0x0F && pInstr[1] == longOpcodeExt)
+    {
+        *pTarget = pInstr + 6 + *(int*)(pInstr + 2);
+        *pInstrSize = 6;
+        return TRUE;
+    }
+    // Check short
+    if (pInstr[0] == shortOpcode)
+    {
+        *pTarget = pInstr + 2 + *(char*)(pInstr + 1);
+        *pInstrSize = 2;
+        return TRUE;
+    }
+    return FALSE;
+}
+
+inline BOOL FollowJnz(PBYTE pInstr, PBYTE* pTarget, DWORD* pInstrSize)
+{
+    return FollowJump(pInstr, 0x75, 0x85, pInstrSize, pTarget);
+}
+
+inline BOOL FollowJz(PBYTE pInstr, PBYTE* pTarget, DWORD* pInstrSize)
+{
+    return FollowJump(pInstr, 0x74, 0x84, pInstrSize, pTarget);
+}
+
+inline BOOL FollowJmp(PBYTE pInstr, PBYTE* pTarget, DWORD* pInstrSize)
+{
+    // Check long
+    if (pInstr[0] == 0xE9)
+    {
+        *pTarget = pInstr + 5 + *(int*)(pInstr + 1);
+        *pInstrSize = 5;
+        return TRUE;
+    }
+    // Check short
+    if (pInstr[0] == 0xEB)
+    {
+        *pTarget = pInstr + 2 + *(char*)(pInstr + 1);
+        *pInstrSize = 2;
+        return TRUE;
+    }
+    return FALSE;
+}
+#endif
+
+#if _M_ARM64
+// https://github.com/CAS-Atlantic/AArch64-Encoding
+
+__forceinline DWORD ARM64_ReadBits(DWORD value, int h, int l)
+{
+    int bits = h - l + 1;
+    DWORD mask = bits == 32 ? 0xFFFFFFFF : ((1u << bits) - 1);
+    return (value >> l) & mask;
+}
+
+__forceinline int ARM64_SignExtend(DWORD value, int numBits)
+{
+    DWORD mask = 1u << (numBits - 1);
+    return (int)((value ^ mask) - mask);
+}
+
+__forceinline int ARM64_ReadBitsSignExtend(DWORD insn, int h, int l)
+{
+    return ARM64_SignExtend(ARM64_ReadBits(insn, h, l), h - l + 1);
+}
+
+__forceinline BOOL ARM64_IsInRange(int value, int numBits)
+{
+    UINT limit = 1u << (numBits - 1);
+    int minVal = -(int)limit;
+    int maxVal = (int)(limit - 1);
+    return value >= minVal && value <= maxVal;
+}
+
+__forceinline UINT_PTR ARM64_Align(UINT_PTR value, UINT_PTR alignment)
+{
+    return value & ~(alignment - 1);
+}
+
+__forceinline BOOL ARM64_IsCBZW(DWORD insn) { return ARM64_ReadBits(insn, 31, 24) == 0b00110100; }
+__forceinline BOOL ARM64_IsCBNZW(DWORD insn) { return ARM64_ReadBits(insn, 31, 24) == 0b00110101; }
+__forceinline BOOL ARM64_IsTBZ(DWORD insn) { return ARM64_ReadBits(insn, 31, 24) == 0b00110110; }
+__forceinline BOOL ARM64_IsTBNZ(DWORD insn) { return ARM64_ReadBits(insn, 31, 24) == 0b00110111; }
+__forceinline BOOL ARM64_IsB(DWORD insn) { return ARM64_ReadBits(insn, 31, 26) == 0b000101; }
+__forceinline BOOL ARM64_IsBL(DWORD insn) { return ARM64_ReadBits(insn, 31, 26) == 0b100101; }
+__forceinline BOOL ARM64_IsADRP(DWORD insn) { return (ARM64_ReadBits(insn, 31, 24) & ~0b01100000) == 0b10010000; }
+__forceinline BOOL ARM64_IsADDIMM(DWORD insn) { return (insn & 0x7F000000) == 0x11000000; } // Wn and Xn forms accepted
+__forceinline BOOL ARM64_IsMOVZW(DWORD insn) { return ARM64_ReadBits(insn, 31, 23) == 0b010100101; }
+__forceinline BOOL ARM64_IsSTRBIMM(DWORD insn) { return ARM64_ReadBits(insn, 31, 22) == 0b0011100100; }
+
+__forceinline DWORD* ARM64_FollowCBNZW(DWORD* pInsnCBNZW)
+{
+    DWORD insnCBNZW = *pInsnCBNZW;
+    if (!ARM64_IsCBNZW(insnCBNZW))
+        return NULL;
+    int imm19 = ARM64_ReadBitsSignExtend(insnCBNZW, 23, 5);
+    return pInsnCBNZW + imm19; // offset = imm19 * 4
+}
+
+__forceinline DWORD* ARM64_FollowB(DWORD* pInsnB)
+{
+    DWORD insnB = *pInsnB;
+    if (!ARM64_IsB(insnB))
+        return NULL;
+    int imm26 = ARM64_ReadBitsSignExtend(insnB, 25, 0);
+    return pInsnB + imm26; // offset = imm26 * 4
+}
+
+__forceinline DWORD* ARM64_FollowBL(DWORD* pInsnBL)
+{
+    DWORD insnBL = *pInsnBL;
+    if (!ARM64_IsBL(insnBL))
+        return NULL;
+    int imm26 = ARM64_ReadBitsSignExtend(insnBL, 25, 0);
+    return pInsnBL + imm26; // offset = imm26 * 4
+}
+
+__forceinline DWORD ARM64_MakeB(int imm26)
+{
+    if (!ARM64_IsInRange(imm26, 26))
+        return 0;
+    return 0b000101u << 26 | (imm26 & (1u << 26) - 1);
+}
+
+__forceinline DWORD ARM64_MakeBL(int imm26)
+{
+    if (!ARM64_IsInRange(imm26, 26))
+        return 0;
+    return 0b100101u << 26 | (imm26 & (1u << 26) - 1);
+}
+
+__forceinline DWORD ARM64_CBZWToB(DWORD insnCBZW)
+{
+    if (!ARM64_IsCBZW(insnCBZW))
+        return 0;
+    int imm19 = ARM64_ReadBitsSignExtend(insnCBZW, 23, 5);
+    return ARM64_MakeB(imm19);
+}
+
+__forceinline DWORD ARM64_CBNZWToB(DWORD insnCBNZW)
+{
+    if (!ARM64_IsCBNZW(insnCBNZW))
+        return 0;
+    int imm19 = ARM64_ReadBitsSignExtend(insnCBNZW, 23, 5);
+    return ARM64_MakeB(imm19);
+}
+
+__forceinline DWORD ARM64_TBZToB(DWORD insnTBZ)
+{
+    if (!ARM64_IsTBZ(insnTBZ))
+        return 0;
+    int imm14 = ARM64_ReadBitsSignExtend(insnTBZ, 18, 5);
+    return ARM64_MakeB(imm14);
+}
+
+__forceinline DWORD ARM64_TBNZToB(DWORD insnTBNZ)
+{
+    if (!ARM64_IsTBNZ(insnTBNZ))
+        return 0;
+    int imm14 = ARM64_ReadBitsSignExtend(insnTBNZ, 18, 5);
+    return ARM64_MakeB(imm14);
+}
+
+__forceinline DWORD ARM64_DecodeADD(DWORD insnADD)
+{
+    if (!ARM64_IsADDIMM(insnADD))
+        return 0;
+    DWORD imm12 = ARM64_ReadBits(insnADD, 21, 10);
+    DWORD shift = ARM64_ReadBits(insnADD, 22, 22);
+    return imm12 << (shift * 12);
+}
+
+__forceinline DWORD ARM64_DecodeSTRBIMM(DWORD insnSTRBIMM)
+{
+    if (ARM64_ReadBits(insnSTRBIMM, 31, 22) != 0b0011100100)
+        return (DWORD)-1;
+    DWORD imm12 = ARM64_ReadBits(insnSTRBIMM, 21, 10);
+    return imm12;
+}
+
+__forceinline DWORD ARM64_DecodeLDRBIMM(DWORD insnLDRBIMM)
+{
+    if (ARM64_ReadBits(insnLDRBIMM, 31, 22) != 0b0011100101)
+        return (DWORD)-1;
+    DWORD imm12 = ARM64_ReadBits(insnLDRBIMM, 21, 10);
+    return imm12;
+}
+
+__forceinline DWORD ARM64_DecodeLDRIMMW(DWORD insnLDRIMMW)
+{
+    if (ARM64_ReadBits(insnLDRIMMW, 31, 22) != 0b1011100101)
+        return (DWORD)-1;
+    DWORD imm12 = ARM64_ReadBits(insnLDRIMMW, 21, 10);
+    return imm12;
+}
+
+inline UINT_PTR ARM64_DecodeADRLEx(
+    UINT_PTR offset, DWORD insnADRP, DWORD insnADD, BYTE* pRdADRP, BYTE* pRdADD, BYTE* pRnADD)
+{
+    if (!ARM64_IsADRP(insnADRP))
+        return 0;
+
+    if (pRdADRP)
+        *pRdADRP = (BYTE)ARM64_ReadBits(insnADRP, 4, 0);
+
+    if (pRdADD)
+        *pRdADD = (BYTE)ARM64_ReadBits(insnADD, 4, 0);
+
+    if (pRnADD)
+        *pRnADD = (BYTE)ARM64_ReadBits(insnADD, 9, 5);
+
+    UINT_PTR page = ARM64_Align(offset, 0x1000);
+
+    DWORD adrp_immlo = ARM64_ReadBits(insnADRP, 30, 29);
+    DWORD adrp_immhi = ARM64_ReadBits(insnADRP, 23, 5);
+    INT_PTR adrp_imm = (INT_PTR)ARM64_SignExtend((adrp_immhi << 2) | adrp_immlo, 21) << 12;
+
+    DWORD add_imm = ARM64_DecodeADD(insnADD);
+    if (add_imm == 0)
+        return 0;
+
+    return page + adrp_imm + add_imm;
+}
+
+__forceinline UINT_PTR ARM64_DecodeADRL(UINT_PTR offset, DWORD insnADRP, DWORD insnADD)
+{
+    return ARM64_DecodeADRLEx(offset, insnADRP, insnADD, NULL, NULL, NULL);
+}
+
+__forceinline BOOL ARM64_EncodeADDIMMX(BYTE rd, BYTE rn, DWORD imm, DWORD* pinsnADD)
+{
+    DWORD shift;
+    DWORD imm12;
+
+    if (imm <= 0xFFF)
+    {
+        shift = 0;
+        imm12 = imm;
+    }
+    else if ((imm & 0xFFF) == 0 && imm <= (0xFFFu << 12))
+    {
+        shift = 1;
+        imm12 = imm >> 12;
+    }
+    else
+    {
+        return FALSE;
+    }
+
+    // ADD Xd, Xn, #imm
+    *pinsnADD = (1u << 31) /*sf = 1 (64-bit)*/ | (0b10001u << 24) /*opcode*/ | (shift << 22) | (imm12 << 10) | ((rn & 0x1F) << 5) | (rd & 0x1F);
+
+    return TRUE;
+}
+
+__forceinline BOOL ARM64_EncodeADRP(UINT_PTR offset, UINT_PTR target, BYTE rd, DWORD* pinsnADRP)
+{
+    INT_PTR pageDelta = (INT_PTR)ARM64_Align(target, 0x1000) - (INT_PTR)ARM64_Align(offset, 0x1000);
+
+    INT_PTR imm21 = pageDelta >> 12;
+
+    if (!ARM64_IsInRange((int)imm21, 21))
+        return FALSE;
+
+    DWORD imm = (DWORD)imm21 & 0x1FFFFF;
+
+    DWORD immlo = imm & 0x3;
+    DWORD immhi = imm >> 2;
+
+    *pinsnADRP = (1u << 31) /*op = ADRP*/ | (immlo << 29) | (0b10000u << 24) | (immhi << 5) | (rd & 0x1F);
+
+    return TRUE;
+}
+
+__forceinline BOOL ARM64_EncodeADRL(
+    UINT_PTR offset, UINT_PTR target, BYTE rdADRP, BYTE rdADD, DWORD* pinsnADRP, DWORD* pinsnADD)
+{
+    UINT_PTR page = ARM64_Align(target, 0x1000);
+    DWORD pageOff = (DWORD)(target - page);
+
+    if (!ARM64_EncodeADRP(offset, target, rdADRP, pinsnADRP))
+        return FALSE;
+
+    if (!ARM64_EncodeADDIMMX(rdADD, rdADRP, pageOff, pinsnADD))
+        return FALSE;
+
+    return TRUE;
+}
+#endif
+
+extern UINT PleaseWaitTimeout;
+extern HHOOK PleaseWaitHook;
+extern HWND PleaseWaitHWND;
+extern void* PleaseWaitCallbackData;
+extern BOOL (*PleaseWaitCallbackFunc)(void* data);
+BOOL PleaseWait_UpdateTimeout(int timeout);
+VOID CALLBACK PleaseWait_TimerProc(HWND hWnd, UINT uMsg, UINT idEvent, DWORD dwTime);
+LRESULT CALLBACK PleaseWait_HookProc(int code, WPARAM wParam, LPARAM lParam);
+
+BOOL DownloadAndInstallWebView2Runtime();
+
+BOOL DownloadFile(LPCWSTR wszURL, DWORD dwSize, LPCWSTR wszPath);
+
+BOOL IsConnectedToInternet();
+
+#define SCRATCH_QCM_FIRST 1
+#define SCRATCH_QCM_LAST  0x7FFF
+
+#define SPOP_OPENMENU            1
+#define SPOP_INSERTMENU_ALL      0b1111110000
+#define SPOP_INSERTMENU_OPEN     0b0000010000
+#define SPOP_INSERTMENU_NEXTPIC  0b0000100000
+#define SPOP_INSERTMENU_LIKE     0b0001000000
+#define SPOP_INSERTMENU_DISLIKE  0b0010000000
+#define SPOP_INSERTMENU_INFOTIP1 0b0100000000
+#define SPOP_INSERTMENU_INFOTIP2 0b1000000000
+#define SPOP_CLICKMENU_FIRST     40000
+#define SPOP_CLICKMENU_OPEN      40000
+#define SPOP_CLICKMENU_NEXTPIC   40001
+#define SPOP_CLICKMENU_LIKE      40002
+#define SPOP_CLICKMENU_DISLIKE   40003
+#define SPOP_CLICKMENU_LAST      40003
+
+BOOL DoesOSBuildSupportSpotlight();
+
+BOOL IsSpotlightEnabled();
+
+void SpotlightHelper(DWORD dwOp, HWND hWnd, HMENU hMenu, LPPOINT pPt);
+
+typedef struct _MonitorOverrideData
+{
+    DWORD cbIndex;
+    DWORD dwIndex;
+    HMONITOR hMonitor;
+} MonitorOverrideData;
+
+BOOL ExtractMonitorByIndex(HMONITOR hMonitor, HDC hDC, LPRECT lpRect, MonitorOverrideData* mod);
+HRESULT SHRegGetBOOLWithREGSAM(HKEY key, LPCWSTR subKey, LPCWSTR value, REGSAM regSam, BOOL* data);
+HRESULT SHRegGetDWORD(HKEY hkey, const WCHAR* pwszSubKey, const WCHAR* pwszValue, DWORD* pdwData);
+VS_FIXEDFILEINFO* GetModuleVersionInfo(HMODULE hModule, UINT* puPtrLen);
+BOOL IsOsFeatureEnabled(UINT featureId, BOOL bEnabledByDefault);
+BOOL IsRedesignedWin11StartMenu();
+
+FORCEINLINE BOOL _MaskCompareByteLevel(PVOID pvSearch, LPCSTR pszPattern, LPCSTR pszMask)
+{
+    for (PBYTE value = (PBYTE)pvSearch; *pszMask; ++pszPattern, ++pszMask, ++value)
+    {
+        if (*pszMask == 'x' && *(LPCBYTE)pszPattern != *value)
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
+inline DECLSPEC_NOINLINE PVOID _FindPatternHelper_1_(PVOID pvSearch, size_t cbSearch, LPCSTR pszPattern, LPCSTR pszMask)
+{
+    PBYTE pBegin = (PBYTE)pvSearch;
+    PBYTE pEnd = pBegin + cbSearch;
+    for (PBYTE pIt = pBegin; pIt <= pEnd; pIt += 1)
+    {
+        if (_MaskCompareByteLevel(pIt, pszPattern, pszMask))
+            return pIt;
+    }
+
+    return NULL;
+}
+
+inline DECLSPEC_NOINLINE PVOID _FindPatternHelper_4_(PVOID pvSearch, size_t cbSearch, LPCSTR pszPattern, LPCSTR pszMask)
+{
+    PBYTE pBegin = (PBYTE)pvSearch;
+    PBYTE pEnd = pBegin + cbSearch;
+    for (PBYTE pIt = pBegin; pIt <= pEnd; pIt += 4)
+    {
+        if (_MaskCompareByteLevel(pIt, pszPattern, pszMask))
+            return pIt;
+    }
+
+    return NULL;
+}
+
+FORCEINLINE PVOID FindPattern(PVOID pvSearch, size_t cbSearch, LPCSTR pszPattern, LPCSTR pszMask)
+{
+    cbSearch -= strlen(pszMask);
+    return _FindPatternHelper_1_(pvSearch, cbSearch, pszPattern, pszMask);
+}
+
+FORCEINLINE PVOID FindPattern_4_(PVOID pvSearch, size_t cbSearch, LPCSTR pszPattern, LPCSTR pszMask)
+{
+    cbSearch -= strlen(pszMask);
+    return _FindPatternHelper_4_(pvSearch, cbSearch, pszPattern, pszMask);
+}
+
+FORCEINLINE BOOL _MaskCompareBitLevel(PVOID pvSearch, LPCSTR pszPattern, LPCSTR pszMask, size_t cbPattern)
+{
+    PBYTE pBegin = (PBYTE)pvSearch;
+    PBYTE pEnd = pBegin + cbPattern;
+    for (PBYTE pIt = pBegin; pIt < pEnd; ++pIt, ++pszPattern, ++pszMask)
+    {
+        if ((*pIt & *(LPCBYTE)pszMask) != *(LPCBYTE)pszPattern)
+            return FALSE;
+    }
+
+    return TRUE;
+}
+
+inline DECLSPEC_NOINLINE PVOID _FindPatternBitMaskHelper_1_(
+    PVOID pvSearch, size_t cbSearch, LPCSTR pszPattern, LPCSTR pszMask, size_t cbPattern)
+{
+    PBYTE pBegin = (PBYTE)pvSearch;
+    PBYTE pEnd = pBegin + cbSearch;
+    for (PBYTE pIt = pBegin; pIt <= pEnd; pIt += 1)
+    {
+        if (_MaskCompareBitLevel(pIt, pszPattern, pszMask, cbPattern))
+            return pIt;
+    }
+
+    return NULL;
+}
+
+inline DECLSPEC_NOINLINE PVOID _FindPatternBitMaskHelper_4_(
+    PVOID pvSearch, size_t cbSearch, LPCSTR pszPattern, LPCSTR pszMask, size_t cbPattern)
+{
+    PBYTE pBegin = (PBYTE)pvSearch;
+    PBYTE pEnd = pBegin + cbSearch;
+    for (PBYTE pIt = pBegin; pIt <= pEnd; pIt += 4)
+    {
+        if (_MaskCompareBitLevel(pIt, pszPattern, pszMask, cbPattern))
+            return pIt;
+    }
+
+    return NULL;
+}
+
+FORCEINLINE PVOID FindPatternBitMask(
+    PVOID pvSearch, size_t cbSearch, LPCSTR pszPattern, LPCSTR pszMask, size_t cbPattern)
+{
+    cbSearch -= cbPattern;
+    return _FindPatternBitMaskHelper_1_(pvSearch, cbSearch, pszPattern, pszMask, cbPattern);
+}
+
+FORCEINLINE PVOID FindPatternBitMask_4_(
+    PVOID pvSearch, size_t cbSearch, LPCSTR pszPattern, LPCSTR pszMask, size_t cbPattern)
+{
+    cbSearch -= cbPattern;
+    return _FindPatternBitMaskHelper_4_(pvSearch, cbSearch, pszPattern, pszMask, cbPattern);
+}
+
+inline UINT_PTR FileOffsetToRVA(PBYTE pBase, UINT_PTR offset)
+{
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)pBase;
+    PIMAGE_NT_HEADERS64 pNtHeaders = (PIMAGE_NT_HEADERS64)(pBase + pDosHeader->e_lfanew);
+    PIMAGE_SECTION_HEADER pSection = IMAGE_FIRST_SECTION(pNtHeaders);
+    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++, pSection++)
+    {
+        if (offset >= pSection->PointerToRawData && offset < pSection->PointerToRawData + pSection->SizeOfRawData)
+            return offset - pSection->PointerToRawData + pSection->VirtualAddress;
+    }
+    return 0;
+}
+
+inline UINT_PTR RVAToFileOffset(PBYTE pBase, UINT_PTR rva)
+{
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)pBase;
+    PIMAGE_NT_HEADERS64 pNtHeaders = (PIMAGE_NT_HEADERS64)(pBase + pDosHeader->e_lfanew);
+    PIMAGE_SECTION_HEADER pSection = IMAGE_FIRST_SECTION(pNtHeaders);
+    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++, pSection++)
+    {
+        if (rva >= pSection->VirtualAddress && rva < pSection->VirtualAddress + pSection->Misc.VirtualSize)
+            return rva - pSection->VirtualAddress + pSection->PointerToRawData;
+    }
+    return 0;
+}
+
+inline HMODULE LoadGuiModule()
+{
+    wchar_t epGuiPath[MAX_PATH];
+    ZeroMemory(epGuiPath, sizeof(epGuiPath));
+    SHGetFolderPathW(NULL, SPECIAL_FOLDER, NULL, SHGFP_TYPE_CURRENT, epGuiPath);
+    wcscat_s(epGuiPath, MAX_PATH, _T(APP_RELATIVE_PATH) L"\\ep_gui.dll");
+    return LoadLibraryExW(epGuiPath, NULL, LOAD_LIBRARY_AS_DATAFILE);
+}
+
+/*class DECLSPEC_UUID("7bd7ab1c-f2c5-60c2-8d00-c2e50336a954")
+StartLayoutFactory;*/
+
+DEFINE_GUID(CLSID_StartLayoutFactory, 0x7BD7AB1C, 0xF2C5, 0x60C2, 0x8D, 0x00, 0xC2, 0xE5, 0x03, 0x36, 0xA9, 0x54);
+
+inline BOOL TestClsidExists(HMODULE hModule, REFCLSID rclsid)
+{
+    BOOL bRet = FALSE;
+
+    typedef HRESULT (WINAPI *DllGetClassObject_t)(REFCLSID rclsid, REFIID riid, LPVOID* ppv);
+    DllGetClassObject_t pfnDllGetClassObject = (DllGetClassObject_t)GetProcAddress(hModule, "DllGetClassObject");
+    if (pfnDllGetClassObject)
+    {
+#ifdef __cplusplus
+        IClassFactory* pFactory;
+        HRESULT hr = pfnDllGetClassObject(rclsid, IID_PPV_ARGS(&pFactory));
+        if (SUCCEEDED(hr))
+        {
+            bRet = TRUE;
+            pFactory->Release();
+        }
+#else
+        IClassFactory* pFactory;
+        HRESULT hr = pfnDllGetClassObject(rclsid, &IID_IClassFactory, (void**)&pFactory);
+        if (SUCCEEDED(hr))
+        {
+            bRet = TRUE;
+            pFactory->lpVtbl->Release(pFactory);
+        }
+#endif
+    }
+
+    return bRet;
+}
+
+inline BOOL DoesWindows10StartMenuExist()
+{
+    static BOOL s_tbWindows10StartMenuExists; // UNDEFINED, TRUE, FALSE
+    if (s_tbWindows10StartMenuExists == 0)
+    {
+        if (!IsWindows11())
+        {
+            s_tbWindows10StartMenuExists = 1;
+            return s_tbWindows10StartMenuExists == 1;
+        }
+
+        wchar_t szPath[MAX_PATH];
+        GetWindowsDirectoryW(szPath, MAX_PATH);
+        wcscat_s(szPath, MAX_PATH, L"\\SystemApps\\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\\StartUI.dll");
+        BOOL bRet = FileExistsW(szPath);
+        if (!bRet)
+        {
+            GetWindowsDirectoryW(szPath, MAX_PATH);
+            wcscat_s(szPath, MAX_PATH, L"\\SystemApps\\Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy\\StartUI_.dll");
+            bRet = FileExistsW(szPath);
+        }
+
+        if (bRet)
+        {
+            bRet = FALSE;
+
+            HMODULE hStartTileData = LoadLibraryExW(L"StartTileData.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+            if (hStartTileData)
+            {
+#ifdef __cplusplus
+                bRet = TestClsidExists(hStartTileData, CLSID_StartLayoutFactory);
+#else
+                bRet = TestClsidExists(hStartTileData, &CLSID_StartLayoutFactory);
+#endif
+                if (!bRet)
+                {
+                    SHGetFolderPathW(NULL, SPECIAL_FOLDER, NULL, SHGFP_TYPE_CURRENT, szPath);
+                    wcscat_s(szPath, MAX_PATH, _T(APP_RELATIVE_PATH) L"\\ep_starttiledata.dll");
+
+                    HMODULE hMyStartTileData = LoadLibraryW(szPath);
+                    if (hMyStartTileData)
+                    {
+#ifdef __cplusplus
+                        bRet = TestClsidExists(hMyStartTileData, CLSID_StartLayoutFactory);
+#else
+                        bRet = TestClsidExists(hMyStartTileData, &CLSID_StartLayoutFactory);
+#endif
+                        FreeLibrary(hMyStartTileData);
+                    }
+                }
+
+                FreeLibrary(hStartTileData);
+            }
+        }
+
+        s_tbWindows10StartMenuExists = bRet ? 1 : 2;
+    }
+
+    return s_tbWindows10StartMenuExists == 1;
+}
+
+inline BOOL IsStockWindows10TaskbarAvailable()
+{
+#if _M_X64
+    return global_rovi.dwBuildNumber < 26002;
+#else
+    return !IsWindows11();
+#endif
+}
+
+inline const WCHAR* PickTaskbarDll()
+{
+    DWORD b = global_rovi.dwBuildNumber;
+
+    if (b == 15063 // Windows 10 1703
+     || b == 16299 // Windows 10 1709
+     || b == 17134 // Windows 10 1803
+     || b == 17763 // Windows 10 1809
+     || b >= 18362 && b <= 18363 // Windows 10 1903, 1909
+     || b >= 19041 && b <= 19045) // Windows 10 20H2, 21H2, 22H2
+    {
+        return L"ep_taskbar.rs2.dll";
+    }
+
+    if (b == 20348) // Windows Server 2022
+    {
+        return L"ep_taskbar.fe.dll";
+    }
+
+    if (b >= 21343 && b <= 22000) // Windows 11 21H2
+    {
+        return L"ep_taskbar.co.dll";
+    }
+
+    if ((b >= 22621 && b <= 22635)  // Windows 11 22H2-23H2 Release, Release Preview, and Beta channels
+     || (b >= 23403 && b <= 25197)) // Early pre-reboot Dev channel until post-reboot Dev channel
+    {
+        return L"ep_taskbar.ni.dll";
+    }
+
+    if (b >= 25201 && b <= 25915) // Pre-reboot Dev channel until early Canary channel; Windows Server 23H2
+    {
+        return L"ep_taskbar.zn.dll";
+    }
+
+    if (b >= 25921) // Windows 11 24H2
+    {
+        return L"ep_taskbar.ge.dll";
+    }
+
+    return NULL;
+}
+
+inline BOOL DoesTaskbarDllExist()
+{
+    const wchar_t* pszTaskbarDll = PickTaskbarDll();
+    if (!pszTaskbarDll)
+        return FALSE;
+
+    wchar_t szPath[MAX_PATH];
+    ZeroMemory(szPath, sizeof(szPath));
+    SHGetFolderPathW(NULL, SPECIAL_FOLDER, NULL, SHGFP_TYPE_CURRENT, szPath);
+    wcscat_s(szPath, MAX_PATH, _T(APP_RELATIVE_PATH) L"\\");
+    wcscat_s(szPath, MAX_PATH, pszTaskbarDll);
+    return FileExistsW(szPath);
+}
+
+inline void AdjustTaskbarStyleValue(DWORD* pdwValue)
+{
+    if (*pdwValue >= 2 && !DoesTaskbarDllExist())
+    {
+        *pdwValue = 1;
+    }
+
+    if (IsWindows11())
+    {
+        if (*pdwValue == 1 && !IsStockWindows10TaskbarAvailable())
+        {
+            *pdwValue = 0;
+        }
+    }
+    else
+    {
+        if (*pdwValue == 0)
+        {
+            *pdwValue = 1; // There's no such thing as Windows 11 taskbar on Windows 10
+        }
+    }
+}
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

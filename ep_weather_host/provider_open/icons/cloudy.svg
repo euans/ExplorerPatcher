@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128"><defs>
+<linearGradient id="sun" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffe066"/><stop offset="1" stop-color="#ffab00"/></linearGradient>
+<linearGradient id="moon" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff6c9"/><stop offset="1" stop-color="#e8c766"/></linearGradient>
+<linearGradient id="cloud" gradientUnits="userSpaceOnUse" x1="0" y1="38" x2="0" y2="96"><stop offset="0" stop-color="#f6f9fd"/><stop offset="1" stop-color="#bccadc"/></linearGradient>
+<linearGradient id="dark" gradientUnits="userSpaceOnUse" x1="0" y1="38" x2="0" y2="96"><stop offset="0" stop-color="#a9b6c9"/><stop offset="1" stop-color="#687891"/></linearGradient>
+</defs><g transform="translate(-8 -8) scale(0.8)" fill="url(#dark)"><rect x="22" y="66" width="84" height="30" rx="15"/><circle cx="50" cy="66" r="19"/><circle cx="76" cy="56" r="25"/><circle cx="94" cy="72" r="15"/></g><g transform="translate(10 6) scale(1.0)" fill="url(#cloud)"><rect x="22" y="66" width="84" height="30" rx="15"/><circle cx="50" cy="66" r="19"/><circle cx="76" cy="56" r="25"/><circle cx="94" cy="72" r="15"/></g></svg>
