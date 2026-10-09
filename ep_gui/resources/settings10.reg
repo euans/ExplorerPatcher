@@ -410,15 +410,19 @@
 ;%R:1571%
 ;%R:1569%
 "WeatherApiKeyWeatherApi"=""
-;c 3 %R:1572%
+;c 5 %R:1572%
 ;x 0 %R:1573%
 ;x 1 %R:1574%
 ;x 2 %R:1575%
+;x 3 %R:1577%
+;x 4 %R:1578%
 "WeatherOpenIconsTaskbar"=dword:00000000
-;c 3 %R:1576%
+;c 5 %R:1576%
 ;x 0 %R:1573%
 ;x 1 %R:1574%
 ;x 2 %R:1575%
+;x 3 %R:1577%
+;x 4 %R:1578%
 "WeatherOpenIconsFlyout"=dword:00000000
 ;c 5 %R:1506%
 ;x 0 %R:1507%

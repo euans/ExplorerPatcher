@@ -6,6 +6,7 @@
  *   window.EP_ICONS { '<icon key>': 'data:image/png;base64,...' }     icons shown in the flyout
  *   window.EP_ICONS_TASKBAR                                           icons for the taskbar widget (absent = same as EP_ICONS)
  *   window.EP_ICONS_TASKBAR_PIXEL                                     true = draw the taskbar icon without smoothing
+ *   window.EP_ICONS_MONO                                              true = flyout icons are white only (inverted on the light theme)
  * and then polls window.ep_weather_poll() until it stops returning "ep_pending". Possible results:
  *   "ep_pending"                         still working
  *   "ep_error:<kind>:<message>"          could not get data -> host shows its generic error page
@@ -18,6 +19,7 @@
     const cfg = window.EP_CFG;
     const icons = window.EP_ICONS || {};
     const taskbarIcons = window.EP_ICONS_TASKBAR || icons;
+    if (window.EP_ICONS_MONO) document.documentElement.classList.add('mono-icons');
     const $ = (id) => document.getElementById(id);
     const PAGE_HEIGHT = 367;            // the host maps this to its fixed flyout height (EP_WEATHER_HEIGHT)
     const WATCHDOG_MS = 45000;

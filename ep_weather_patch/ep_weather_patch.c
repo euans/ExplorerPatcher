@@ -229,8 +229,14 @@ static int KillProcesses(LPCWSTR exeName, LPCWSTR module)
     {
         if (_wcsicmp(pe.szExeFile, exeName)) continue;
         if (module && !HasModule(pe.th32ProcessID, module)) continue;
-        HANDLE h = OpenProcess(PROCESS_TERMINATE, FALSE, pe.th32ProcessID);
-        if (h) { if (TerminateProcess(h, 1)) n++; CloseHandle(h); }
+        HANDLE h = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, pe.th32ProcessID);
+        if (h)
+        {
+            // TerminateProcess is asynchronous and the process stays in the process list until it has really exited,
+            // so wait for that; otherwise the dying process is mistaken for a restarted one.
+            if (TerminateProcess(h, 1)) { n++; WaitForSingleObject(h, 10000); }
+            CloseHandle(h);
+        }
     }
     CloseHandle(snap);
     return n;
@@ -286,6 +292,18 @@ static BOOL WaitForProcess(LPCWSTR name, int halfSeconds)
     return ProcessRunning(name);
 }
 
+// The shell is up when the taskbar window exists (a bare explorer.exe process is not enough: it can be a
+// leftover or a short-lived instance).
+static BOOL WaitForTaskbar(int halfSeconds)
+{
+    for (int i = 0; i < halfSeconds; i++)
+    {
+        if (FindWindowW(L"Shell_TrayWnd", NULL)) return TRUE;
+        Sleep(500);
+    }
+    return FindWindowW(L"Shell_TrayWnd", NULL) != NULL;
+}
+
 static void RestartShell(void)
 {
     int w = KillProcesses(L"dllhost.exe", L"ep_weather_host.dll");
@@ -293,11 +311,11 @@ static void RestartShell(void)
     int e = KillProcesses(L"explorer.exe", NULL);
     Log("Stopped %d explorer.exe process(es).", e);
     // Windows usually relaunches the shell by itself, but not reliably (it did not on a second restart in testing).
-    if (WaitForProcess(L"explorer.exe", 16)) { Log("explorer.exe was restarted by Windows."); return; }
-    Log("Windows did not restart explorer.exe; starting it.");
+    if (WaitForTaskbar(24)) { Log("The shell was restarted by Windows."); return; }
+    Log("Windows did not restart the shell; starting explorer.exe.");
     WCHAR explorer[MAX_PATH];
     Join(explorer, g_winDir, L"explorer.exe");
-    if (StartAsUser(explorer, L"explorer.exe")) { Log("explorer.exe started."); return; }
+    if (StartAsUser(explorer, L"explorer.exe") && WaitForTaskbar(30)) { Log("explorer.exe started."); return; }
     Log("WARNING: could not start explorer.exe. Press Ctrl+Shift+Esc > Run new task > explorer.exe.");
 }
 

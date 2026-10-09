@@ -131,6 +131,32 @@ IDR_EPW_ICON_PIXEL_THUNDER      RCDATA  "provider_open\\icons\\pixel\\thunder.pn
 IDR_EPW_ICON_PIXEL_SNOW         RCDATA  "provider_open\\icons\\pixel\\snow.png"
 IDR_EPW_ICON_PIXEL_SLEET        RCDATA  "provider_open\\icons\\pixel\\sleet.png"
 
+IDR_EPW_ICON_MATERIAL_CLEAR_DAY    RCDATA  "provider_open\\icons\\material\\clear-day.png"
+IDR_EPW_ICON_MATERIAL_CLEAR_NIGHT  RCDATA  "provider_open\\icons\\material\\clear-night.png"
+IDR_EPW_ICON_MATERIAL_PARTLY_DAY   RCDATA  "provider_open\\icons\\material\\partly-day.png"
+IDR_EPW_ICON_MATERIAL_PARTLY_NIGHT RCDATA  "provider_open\\icons\\material\\partly-night.png"
+IDR_EPW_ICON_MATERIAL_CLOUDY       RCDATA  "provider_open\\icons\\material\\cloudy.png"
+IDR_EPW_ICON_MATERIAL_FOG          RCDATA  "provider_open\\icons\\material\\fog.png"
+IDR_EPW_ICON_MATERIAL_DRIZZLE      RCDATA  "provider_open\\icons\\material\\drizzle.png"
+IDR_EPW_ICON_MATERIAL_RAIN         RCDATA  "provider_open\\icons\\material\\rain.png"
+IDR_EPW_ICON_MATERIAL_HEAVY_RAIN   RCDATA  "provider_open\\icons\\material\\heavy-rain.png"
+IDR_EPW_ICON_MATERIAL_THUNDER      RCDATA  "provider_open\\icons\\material\\thunder.png"
+IDR_EPW_ICON_MATERIAL_SNOW         RCDATA  "provider_open\\icons\\material\\snow.png"
+IDR_EPW_ICON_MATERIAL_SLEET        RCDATA  "provider_open\\icons\\material\\sleet.png"
+
+IDR_EPW_ICON_MATERIALCOLOR_CLEAR_DAY    RCDATA  "provider_open\\icons\\material-color\\clear-day.png"
+IDR_EPW_ICON_MATERIALCOLOR_CLEAR_NIGHT  RCDATA  "provider_open\\icons\\material-color\\clear-night.png"
+IDR_EPW_ICON_MATERIALCOLOR_PARTLY_DAY   RCDATA  "provider_open\\icons\\material-color\\partly-day.png"
+IDR_EPW_ICON_MATERIALCOLOR_PARTLY_NIGHT RCDATA  "provider_open\\icons\\material-color\\partly-night.png"
+IDR_EPW_ICON_MATERIALCOLOR_CLOUDY       RCDATA  "provider_open\\icons\\material-color\\cloudy.png"
+IDR_EPW_ICON_MATERIALCOLOR_FOG          RCDATA  "provider_open\\icons\\material-color\\fog.png"
+IDR_EPW_ICON_MATERIALCOLOR_DRIZZLE      RCDATA  "provider_open\\icons\\material-color\\drizzle.png"
+IDR_EPW_ICON_MATERIALCOLOR_RAIN         RCDATA  "provider_open\\icons\\material-color\\rain.png"
+IDR_EPW_ICON_MATERIALCOLOR_HEAVY_RAIN   RCDATA  "provider_open\\icons\\material-color\\heavy-rain.png"
+IDR_EPW_ICON_MATERIALCOLOR_THUNDER      RCDATA  "provider_open\\icons\\material-color\\thunder.png"
+IDR_EPW_ICON_MATERIALCOLOR_SNOW         RCDATA  "provider_open\\icons\\material-color\\snow.png"
+IDR_EPW_ICON_MATERIALCOLOR_SLEET        RCDATA  "provider_open\\icons\\material-color\\sleet.png"
+
 #endif    // English (United States) resources
 /////////////////////////////////////////////////////////////////////////////
 

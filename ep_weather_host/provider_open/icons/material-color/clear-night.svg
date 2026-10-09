@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -960 960 960" width="128" height="128"><defs>
+<linearGradient id="sun" gradientUnits="userSpaceOnUse" x1="0" y1="-900" x2="0" y2="-60"><stop offset="0" stop-color="#ffe066"/><stop offset="1" stop-color="#ffab00"/></linearGradient>
+<linearGradient id="moon" gradientUnits="userSpaceOnUse" x1="0" y1="-900" x2="0" y2="-60"><stop offset="0" stop-color="#fff6c9"/><stop offset="1" stop-color="#e8c766"/></linearGradient>
+<linearGradient id="cloud" gradientUnits="userSpaceOnUse" x1="0" y1="-880" x2="0" y2="-160"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#b9c8dc"/></linearGradient>
+<linearGradient id="dark" gradientUnits="userSpaceOnUse" x1="0" y1="-880" x2="0" y2="-160"><stop offset="0" stop-color="#b4c0d2"/><stop offset="1" stop-color="#6a7a93"/></linearGradient>
+<clipPath id="top"><rect x="0" y="-960" width="960" height="650"/></clipPath>
+<clipPath id="bottom"><rect x="0" y="-310" width="960" height="310"/></clipPath>
+</defs><path  fill="url(#moon)" d="M484-80q-84 0-157.5-32t-128-86.5Q144-253 112-326.5T80-484q0-146 93-257.5T410-880q-18 98 11 192.5T521-522q71 71 165.5 100.5T880-410q-26 144-138 237T484-80Z"/></svg>

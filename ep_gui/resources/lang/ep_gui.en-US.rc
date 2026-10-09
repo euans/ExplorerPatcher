@@ -335,6 +335,8 @@ BEGIN
     IDS_WEATHER_OPENICONS_1     "White"
     IDS_WEATHER_OPENICONS_2     "Pixel (8-bit)"
     IDS_WEATHER_OPENICONS_FLYOUT "Flyout icons (non-Google sources)"
+    IDS_WEATHER_OPENICONS_3     "Material (white)"
+    IDS_WEATHER_OPENICONS_4     "Material (color)"
 
     IDS_SP                      "Spotlight"
 

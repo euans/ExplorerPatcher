@@ -18,15 +18,15 @@ const pngs = fs.readdirSync(path.join(open, 'icons')).filter(f => f.endsWith('.p
 test('icon names agree between providers.js, the PNG files, the C table and the rc file', () => {
     assert.deepEqual([...EPW.ICON_KEYS].sort(), pngs);
     const c = read(host, 'ep_weather_provider_open.c');
-    const table = [...c.matchAll(/\{ L"([a-z-]+)", \{ (IDR_EPW_ICON_[A-Z_]+), (IDR_EPW_ICON_WHITE_[A-Z_]+), (IDR_EPW_ICON_PIXEL_[A-Z_]+) \} \}/g)]
-        .map(m => ({ name: m[1], ids: [m[2], m[3], m[4]] }));
+    const table = [...c.matchAll(/\{ L"([a-z-]+)", \{ (IDR_EPW_ICON_[A-Z_]+), (IDR_EPW_ICON_WHITE_[A-Z_]+), (IDR_EPW_ICON_PIXEL_[A-Z_]+), (IDR_EPW_ICON_MATERIAL_[A-Z_]+), (IDR_EPW_ICON_MATERIALCOLOR_[A-Z_]+) \} \}/g)]
+        .map(m => ({ name: m[1], ids: [m[2], m[3], m[4], m[5], m[6]] }));
     assert.deepEqual(table.map(t => t.name).sort(), pngs);
     const rc = read(host, 'ep_weather_host.rc');
     const resourceH = read(host, 'resource.h');
     for (const { name, ids } of table) {
         // one icon set per pack: the default folder, white\ and pixel\ (the rc file doubles every backslash)
         ids.forEach((id, i) => {
-            const dir = ['icons\\\\\\\\', 'icons\\\\\\\\white\\\\\\\\', 'icons\\\\\\\\pixel\\\\\\\\'][i];
+            const dir = ['icons\\\\\\\\', 'icons\\\\\\\\white\\\\\\\\', 'icons\\\\\\\\pixel\\\\\\\\', 'icons\\\\\\\\material\\\\\\\\', 'icons\\\\\\\\material-color\\\\\\\\'][i];
             assert.match(rc, new RegExp(id + '\\s+RCDATA\\s+"provider_open\\\\\\\\' + dir + name + '\\.png"'), 'rc entry ' + id);
             assert.match(resourceH, new RegExp('#define ' + id + '\\s+\\d+'), 'resource.h id ' + id);
         });
@@ -34,14 +34,14 @@ test('icon names agree between providers.js, the PNG files, the C table and the 
 });
 
 test('every icon pack has the same 12 files', () => {
-    for (const pack of ['white', 'pixel']) {
+    for (const pack of ['white', 'pixel', 'material', 'material-color']) {
         const names = fs.readdirSync(path.join(open, 'icons', pack)).filter(f => f.endsWith('.png')).map(f => f.slice(0, -4)).sort();
         assert.deepEqual(names, pngs, pack);
     }
 });
 
 test('PNG icons are real, square, transparent PNGs', () => {
-    for (const pack of ['', 'white', 'pixel']) {
+    for (const pack of ['', 'white', 'pixel', 'material', 'material-color']) {
         for (const n of pngs) {
             const b = fs.readFileSync(path.join(open, 'icons', pack, n + '.png'));
             const label = pack + '/' + n;
@@ -55,19 +55,19 @@ test('PNG icons are real, square, transparent PNGs', () => {
 
 test('icon-set constants and registry names agree between the C sources, the settings pages and ui.js', () => {
     const h = read(host, 'ep_weather.h');
-    for (const [k, v] of Object.entries({ COLOR: 0, WHITE: 1, PIXEL: 2 })) {
+    for (const [k, v] of Object.entries({ COLOR: 0, WHITE: 1, PIXEL: 2, MATERIAL: 3, MATERIALCOLOR: 4 })) {
         assert.match(h, new RegExp('#define EP_WEATHER_OPENICONS_' + k + '\\s+' + v + '\\b'));
     }
-    assert.match(h, /#define EP_WEATHER_NUM_OPENICONS 3/);
+    assert.match(h, /#define EP_WEATHER_NUM_OPENICONS 5/);
     const res = path.join(repo, 'ep_gui', 'resources');
     for (const name of ['settings.reg', 'settings10.reg']) {
         const reg = read(res, name);
-        assert.match(reg, /;c 3 %R:1572%\r?\n(;x \d %R:157\d%\r?\n){3}"WeatherOpenIconsTaskbar"=dword:00000000/);
-        assert.match(reg, /;c 3 %R:1576%\r?\n(;x \d %R:157\d%\r?\n){3}"WeatherOpenIconsFlyout"=dword:00000000/);
+        assert.match(reg, /;c 5 %R:1572%\r?\n(;x \d %R:157\d%\r?\n){5}"WeatherOpenIconsTaskbar"=dword:00000000/);
+        assert.match(reg, /;c 5 %R:1576%\r?\n(;x \d %R:157\d%\r?\n){5}"WeatherOpenIconsFlyout"=dword:00000000/);
     }
     const header = read(res, 'EPSettingsResources.h');
     const rc = read(res, 'lang', 'ep_gui.en-US.rc');
-    for (const id of ['1572', '1573', '1574', '1575', '1576']) {
+    for (const id of ['1572', '1573', '1574', '1575', '1576', '1577', '1578']) {
         const sym = header.match(new RegExp('#define (IDS_\\w+) ' + id + '\\b'))[1];
         assert.match(rc, new RegExp('^\\s+' + sym + '\\s+"', 'm'), sym);
     }
@@ -76,7 +76,7 @@ test('icon-set constants and registry names agree between the C sources, the set
     const idl = read(repo, 'ep_weather_host_stub', 'ep_weather_host.idl');
     assert.ok(idl.indexOf('SetOpenIcons') > idl.indexOf('SetApiKey'), 'SetOpenIcons must stay appended after SetApiKey');
     const ui = read(open, 'ui.js');
-    for (const v of ['EP_ICONS_TASKBAR', 'EP_ICONS_TASKBAR_PIXEL']) assert.ok(ui.includes('window.' + v), v);
+    for (const v of ['EP_ICONS_TASKBAR', 'EP_ICONS_TASKBAR_PIXEL', 'EP_ICONS_MONO']) assert.ok(ui.includes('window.' + v), v);
 });
 
 test('resource ids are unique and every RCDATA file exists', () => {

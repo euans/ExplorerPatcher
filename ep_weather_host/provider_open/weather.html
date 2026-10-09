@@ -94,6 +94,10 @@ footer { grid-column: 1 / -1; padding-top: 7px; color: var(--muted); font-size: 
 #msg h2 { margin: 6px 0 0; font-size: 18px; font-weight: 600; }
 #msg p { margin: 0; max-width: 480px; line-height: 1.5; color: var(--muted); }
 #msg code { color: var(--warn); }
+
+/* White-only icon sets (white, material) are inverted on the light theme so they stay visible. */
+:root.mono-icons img { filter: invert(1); }
+@media (prefers-color-scheme: dark) { :root.mono-icons img { filter: none; } }
 </style>
 </head>
 <body>
