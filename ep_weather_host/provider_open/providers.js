@@ -1,5 +1,5 @@
 /*
- * Weather data adapters for the non-Google ExplorerPatcher weather providers.
+ * Weather data adapters for the ExplorerPatcher weather providers.
  *
  * Runs inside the WebView2 page hosted by ep_weather_host (see weather.html / ui.js) and also under
  * Node for testing (see test/). No DOM access in here: every adapter turns one upstream API into the

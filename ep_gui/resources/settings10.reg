@@ -394,14 +394,13 @@
 ;%R:1504%
 ;%R:1505%
 "WeatherLocation"=""
-;c 6 %R:1560%
-;x 1 %R:1561%
+;c 5 %R:1560%
 ;x 2 %R:1562%
 ;x 3 %R:1563%
 ;x 4 %R:1564%
 ;x 5 %R:1565%
 ;x 6 %R:1566%
-"WeatherProvider"=dword:00000001
+"WeatherProvider"=dword:00000002
 ;w %R:1567%
 ;%R:1568%
 ;%R:1569%
@@ -466,10 +465,6 @@
 ;x 1 %R:1538%
 ;x 2 %R:1539%
 "WeatherTheme"=dword:00000000
-;c 2 %R:1544%
-;x 0 %R:1545%
-;x 1 %R:1546%
-"WeatherIconPack"=dword:00000000
 ;c 2 %R:1547%
 ;x 0 %R:1548%
 ;x 1 %R:1549%

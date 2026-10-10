@@ -1,5 +1,5 @@
 /*
- * Flyout rendering and the host protocol for the non-Google weather providers.
+ * Flyout rendering and the host protocol for the weather providers.
  *
  * ep_weather_host injects, before this script runs:
  *   window.EP_CFG   { provider, term, lang, unit: 'C'|'F', apiKey, geo, iconSize, textScale }
@@ -11,7 +11,7 @@
  *   "ep_pending"                         still working
  *   "ep_error:<kind>:<message>"          could not get data -> host shows its generic error page
  *   "<dir>#<height>#<temp>#<unit>#<condition>#<location>#<hex>"
- *                                        same contract as the Google provider; <hex> is the taskbar icon as
+ *                                        the host parses this for the taskbar widget; <hex> is the taskbar icon as
  *                                        premultiplied BGRA pixels (iconSize x iconSize), hex encoded
  */
 (function () {

@@ -1,6 +1,4 @@
 #include "ep_weather_host.h"
-#include "ep_weather_provider_google_html.h"
-#include "ep_weather_provider_google_script.h"
 #include "ep_weather_error_html.h"
 #include "ep_weather_provider_open.h"
 
@@ -336,32 +334,6 @@ HRESULT STDMETHODCALLTYPE _epw_Weather_NavigateToProvider(EPWeather* _this)
     if (dwProvider == EP_WEATHER_PROVIDER_TEST)
     {
     }
-    else if (dwProvider == EP_WEATHER_PROVIDER_GOOGLE)
-    {
-        //hr = _this->pCoreWebView2->lpVtbl->Navigate(_this->pCoreWebView2, L"https://google.com");
-        LPWSTR wszScriptData = malloc(sizeof(WCHAR) * EP_WEATHER_PROVIDER_GOOGLE_HTML_LEN);
-        if (wszScriptData)
-        {
-            swprintf_s(wszScriptData, EP_WEATHER_PROVIDER_GOOGLE_HTML_LEN, L"https://www.google.com/search?hl=%s&q=weather%s%s", _this->wszLanguage, _this->wszTerm[0] ? L" " : L"", _this->wszTerm);
-            if (_this->pCoreWebView2)
-            {
-                hr = _this->pCoreWebView2->lpVtbl->Navigate(_this->pCoreWebView2, wszScriptData);
-            }
-            else
-            {
-                hr = E_FAIL;
-            }
-            if (FAILED(hr))
-            {
-                InterlockedExchange64(&_this->bBrowserBusy, FALSE);
-            }
-            free(wszScriptData);
-        }
-        else
-        {
-            hr = E_OUTOFMEMORY;
-        }
-    }
     else if (EP_WEATHER_IS_OPEN_PROVIDER(dwProvider))
     {
         InterlockedExchange64(&_this->bShowingErrorPage, FALSE);
@@ -398,43 +370,6 @@ HRESULT STDMETHODCALLTYPE _epw_Weather_ExecuteDataScript(EPWeather* _this)
     LONG64 dwProvider = InterlockedAdd64(&_this->dwProvider, 0);
     if (dwProvider == EP_WEATHER_PROVIDER_TEST)
     {
-    }
-    else if (dwProvider == EP_WEATHER_PROVIDER_GOOGLE)
-    {
-        LPWSTR wszScriptData = malloc(sizeof(WCHAR) * EP_WEATHER_PROVIDER_GOOGLE_SCRIPT_LEN);
-        if (wszScriptData)
-        {
-            LONG64 dwIconPack = InterlockedAdd(&_this->dwIconPack, 0);
-            if (dwIconPack == EP_WEATHER_ICONPACK_MICROSOFT)
-            {
-                swprintf_s(wszScriptData, EP_WEATHER_PROVIDER_GOOGLE_SCRIPT_LEN, L"%s%s%s%s%s%s", ep_weather_provider_google_script00, ep_weather_provider_google_script010, ep_weather_provider_google_script011, ep_weather_provider_google_script020, ep_weather_provider_google_script021, ep_weather_provider_google_script03);
-            }
-            else if (dwIconPack == EP_WEATHER_ICONPACK_GOOGLE)
-            {
-                swprintf_s(wszScriptData, EP_WEATHER_PROVIDER_GOOGLE_SCRIPT_LEN, ep_weather_provider_google_script10);
-            }
-            //wprintf(L"%s\n", _this->wszScriptData);
-            if (_this->pCoreWebView2)
-            {
-                GenericObjectWithThis* pCoreWebView2ExecuteScriptCompletedHandler =
-                    GenericObjectWithThis_MakeAndInitialize(&EPWeather_ICoreWebView2ExecuteScriptCompletedHandlerVtbl, _this, L"pCoreWebView2ExecuteScriptCompletedHandler");
-                if (!pCoreWebView2ExecuteScriptCompletedHandler) hr = E_FAIL;
-                else hr = _this->pCoreWebView2->lpVtbl->ExecuteScript(_this->pCoreWebView2, wszScriptData, pCoreWebView2ExecuteScriptCompletedHandler);
-            }
-            else
-            {
-                hr = E_FAIL;
-            }
-            if (FAILED(hr))
-            {
-                InterlockedExchange64(&_this->bBrowserBusy, FALSE);
-            }
-            free(wszScriptData);
-        }
-        else
-        {
-            hr = E_OUTOFMEMORY;
-        }
     }
     else if (EP_WEATHER_IS_OPEN_PROVIDER(dwProvider))
     {
@@ -478,23 +413,9 @@ HRESULT STDMETHODCALLTYPE _ep_Weather_StartResize(EPWeather* _this)
 
 HRESULT STDMETHODCALLTYPE _ep_Weather_ReboundBrowser(EPWeather* _this, LONG64 dwType)
 {
-    UINT dpi = GetDpiForWindow(_this->hWnd);
+    // The pages are laid out to fill the window.
     RECT bounds;
-    DWORD dwDevMode = InterlockedAdd64(&_this->dwDevMode, 0);
-    // The offsets below crop Google's page; the other providers' pages are laid out to fill the window.
-    if (dwType || dwDevMode || EP_WEATHER_IS_OPEN_PROVIDER(InterlockedAdd64(&_this->dwProvider, 0)))
-    {
-        GetClientRect(_this->hWnd, &bounds);
-    }
-    else
-    {
-        DWORD dwTextScaleFactor = epw_Weather_GetTextScaleFactor(_this);
-        DWORD dwZoomFactor = epw_Weather_GetZoomFactor(_this);
-        bounds.left = 0 - MulDiv(MulDiv(MulDiv(181, dpi, 96), dwTextScaleFactor, 100), dwZoomFactor, 100);
-        bounds.top = 0 - MulDiv(MulDiv(MulDiv(152, dpi, 96), dwTextScaleFactor, 100), dwZoomFactor, 100);
-        bounds.right = MulDiv(MulDiv(MulDiv((!InterlockedAdd64(&_this->dwTextDir, 0) ? 1333 : 705), dpi, 96), dwTextScaleFactor, 100), dwZoomFactor, 100);// 5560;
-        bounds.bottom = MulDiv(MulDiv(MulDiv(600, dpi, 96), dwTextScaleFactor, 100), dwZoomFactor, 100);// 15600;
-    }
+    GetClientRect(_this->hWnd, &bounds);
     if (_this->pCoreWebView2Controller)
     {
         _this->pCoreWebView2Controller->lpVtbl->put_Bounds(_this->pCoreWebView2Controller, bounds);
@@ -664,11 +585,11 @@ HRESULT STDMETHODCALLTYPE ICoreWebView2_ExecuteScriptCompleted(GenericObjectWith
         BOOL bOk = FALSE;
         LONG64 dwProvider = InterlockedAdd64(&_this->dwProvider, 0);
         BOOL bIsOpenProvider = EP_WEATHER_IS_OPEN_PROVIDER(dwProvider);
-        if (dwProvider == EP_WEATHER_PROVIDER_GOOGLE || bIsOpenProvider)
+        if (bIsOpenProvider)
         {
-            // The pages of the non-Google providers answer with one of: "ep_pending" (still fetching, ask again),
-            // "ep_error:..." (give up), or the same '#'-separated payload the Google script produces, which is
-            // parsed by the final branch below.
+            // The pages answer with one of: "ep_pending" (still fetching, ask again), "ep_error:..." (give up),
+            // or a '#'-separated payload (direction, height, temperature, unit, condition, location, icon),
+            // which is parsed by the final branch below.
             if (bIsOpenProvider && (FAILED(hr) || !pResultObjectAsJson))
             {
                 printf("[Open provider] Script execution failed: 0x%x\n", hr);
@@ -682,43 +603,6 @@ HRESULT STDMETHODCALLTYPE ICoreWebView2_ExecuteScriptCompleted(GenericObjectWith
             else if (bIsOpenProvider && !wcsncmp(pResultObjectAsJson, L"\"ep_error", 9))
             {
                 wprintf(L"[Open provider] %s\n", pResultObjectAsJson);
-            }
-            else if (!_wcsicmp(pResultObjectAsJson, L"\"run_part_2\""))
-            {
-                //_this->pCoreWebView2->lpVtbl->OpenDevToolsWindow(_this->pCoreWebView2);
-
-                //printf("running part 2\n");
-                //LONG64 bEnabled, dwDarkMode;
-                //dwDarkMode = InterlockedAdd64(&_this->g_darkModeEnabled, 0);
-                //epw_Weather_IsDarkMode(_this, dwDarkMode, &bEnabled);
-                //swprintf_s(_this->wszScriptData, EP_WEATHER_PROVIDER_GOOGLE_SCRIPT_LEN, ep_weather_provider_google_script2, bEnabled ? 1 : 0);
-                GenericObjectWithThis* pCoreWebView2ExecuteScriptCompletedHandler =
-                    GenericObjectWithThis_MakeAndInitialize(&EPWeather_ICoreWebView2ExecuteScriptCompletedHandlerVtbl, _this, L"pCoreWebView2ExecuteScriptCompletedHandler");
-                if (pCoreWebView2ExecuteScriptCompletedHandler) _this->pCoreWebView2->lpVtbl->ExecuteScript(_this->pCoreWebView2, ep_weather_provider_google_script2, pCoreWebView2ExecuteScriptCompletedHandler);
-                bOk = TRUE;
-            }
-            else if (!_wcsicmp(pResultObjectAsJson, L"\"run_part_0\""))
-            {
-                LONG64 dwTemperatureUnit = InterlockedAdd64(&_this->dwTemperatureUnit, 0);
-                LONG64 cbx = InterlockedAdd64(&_this->cbx, 0);
-                LPWSTR wszScriptData = malloc(sizeof(WCHAR) * EP_WEATHER_PROVIDER_GOOGLE_SCRIPT_LEN);
-                if (wszScriptData)
-                {
-                    swprintf_s(wszScriptData, EP_WEATHER_PROVIDER_GOOGLE_SCRIPT_LEN, ep_weather_provider_google_script, dwTemperatureUnit == EP_WEATHER_TUNIT_FAHRENHEIT ? L'F' : L'C', cbx, cbx);
-                    GenericObjectWithThis* pCoreWebView2ExecuteScriptCompletedHandler =
-                        GenericObjectWithThis_MakeAndInitialize(&EPWeather_ICoreWebView2ExecuteScriptCompletedHandlerVtbl, _this, L"pCoreWebView2ExecuteScriptCompletedHandler");
-                    if (pCoreWebView2ExecuteScriptCompletedHandler) _this->pCoreWebView2->lpVtbl->ExecuteScript(_this->pCoreWebView2, wszScriptData, pCoreWebView2ExecuteScriptCompletedHandler);
-                    free(wszScriptData);
-                }
-                bOk = TRUE;
-            }
-            else if (!_wcsicmp(pResultObjectAsJson, L"\"run_part_1\""))
-            {
-                printf("consent granted\n");
-                PostMessageW(_this->hWnd, EP_WEATHER_WM_FETCH_DATA, 0, 0);
-                SetTimer(_this->hWnd, EP_WEATHER_TIMER_REQUEST_REFRESH, EP_WEATHER_TIMER_REQUEST_REFRESH_DELAY * 5, NULL);
-                _this2->lpVtbl->Release(_this2);
-                return S_OK;
             }
             else
             {
@@ -1069,23 +953,15 @@ LRESULT CALLBACK epw_Weather_WindowProc(_In_ HWND hWnd, _In_ UINT uMsg, _In_ WPA
     }
     else if (uMsg == WM_TIMER && wParam == EP_WEATHER_TIMER_RESIZE_WINDOW)
     {
-        LPWSTR uri = NULL;
-        if (_this->pCoreWebView2)
-        {
-            _this->pCoreWebView2->lpVtbl->get_Source(_this->pCoreWebView2, &uri);
-        }
         DWORD dwTextScaleFactor = epw_Weather_GetTextScaleFactor(_this);
         DWORD dwZoomFactor = epw_Weather_GetZoomFactor(_this);
         UINT dpi = GetDpiForWindow(_this->hWnd);
-        // Google's pages are real URLs, so about:blank means the (shorter) error page. The other providers' pages
-        // are also loaded with NavigateToString, so they track which page is showing explicitly.
-        BOOL bIsErrorPage = EP_WEATHER_IS_OPEN_PROVIDER(InterlockedAdd64(&_this->dwProvider, 0)) ?
-            (BOOL)InterlockedAdd64(&_this->bShowingErrorPage, 0) : !wcscmp(L"about:blank", uri ? uri : L"");
+        // The pages are loaded with NavigateToString, so which one is showing is tracked explicitly.
+        BOOL bIsErrorPage = (BOOL)InterlockedAdd64(&_this->bShowingErrorPage, 0);
         RECT rcAdj;
         SetRect(&rcAdj, 0, 0, MulDiv(MulDiv(MulDiv(EP_WEATHER_WIDTH, dpi, 96), dwTextScaleFactor, 100), dwZoomFactor, 100), MulDiv(MulDiv(MulDiv((bIsErrorPage ? EP_WEATHER_HEIGHT_ERROR : EP_WEATHER_HEIGHT), dpi, 96), dwTextScaleFactor, 100), dwZoomFactor, 100));
         AdjustWindowRectExForDpi(&rcAdj, epw_Weather_GetStyle(_this) & ~WS_OVERLAPPED, epw_Weather_HasMenuBar(_this), epw_Weather_GetExtendedStyle(_this), dpi);
         SetWindowPos(_this->hWnd, NULL, 0, 0, rcAdj.right - rcAdj.left, rcAdj.bottom - rcAdj.top, SWP_NOMOVE | SWP_NOSENDCHANGING);
-        CoTaskMemFree(uri);
         if (_this->cntResizeWindow == 7)
         {
             _this->cntResizeWindow = 0;
@@ -1430,13 +1306,11 @@ HRESULT STDMETHODCALLTYPE epw_Weather_SetDevMode(EPWeather* _this, LONG64 dwDevM
     return S_OK;
 }
 
+// Kept only so the COM interface (and its method order) stays as it was: the Microsoft/Google icon pack belonged to
+// the removed Google provider. The icon sets are chosen with SetOpenIcons.
 HRESULT STDMETHODCALLTYPE epw_Weather_SetIconPack(EPWeather* _this, LONG64 dwIconPack, LONG64 bRefresh)
 {
     InterlockedExchange64(&_this->dwIconPack, dwIconPack);
-    if (bRefresh)
-    {
-        PostMessageW(_this->hWnd, EP_WEATHER_WM_FETCH_DATA, 0, 0);
-    }
     return S_OK;
 }
 
@@ -1455,7 +1329,7 @@ HRESULT STDMETHODCALLTYPE epw_Weather_GetLastUpdateTime(EPWeather* _this, LPSYST
 
 HRESULT STDMETHODCALLTYPE epw_Weather_SetProvider(EPWeather* _this, LONG64 dwProvider, LONG64 bRefresh)
 {
-    if (dwProvider < 0 || dwProvider >= EP_WEATHER_NUM_PROVIDERS)
+    if (!EP_WEATHER_IS_OPEN_PROVIDER(dwProvider))
     {
         return E_INVALIDARG;
     }
@@ -1471,7 +1345,7 @@ HRESULT STDMETHODCALLTYPE epw_Weather_SetProvider(EPWeather* _this, LONG64 dwPro
 // in bytes, like SetTerm; the key ends at the first NUL.
 HRESULT STDMETHODCALLTYPE epw_Weather_SetApiKey(EPWeather* _this, LONG64 dwProvider, DWORD cbKey, LPCWSTR wszKey)
 {
-    if (dwProvider < 0 || dwProvider >= EP_WEATHER_NUM_PROVIDERS)
+    if (!EP_WEATHER_IS_OPEN_PROVIDER(dwProvider))
     {
         return E_INVALIDARG;
     }
@@ -1497,7 +1371,7 @@ HRESULT STDMETHODCALLTYPE epw_Weather_SetApiKey(EPWeather* _this, LONG64 dwProvi
     return S_OK;
 }
 
-// Chooses the icon sets of the non-Google providers: one for the taskbar widget, one for the flyout. The page is
+// Chooses the icon sets: one for the taskbar widget, one for the flyout. The page is
 // rebuilt on a refresh because the sets are embedded in it.
 HRESULT STDMETHODCALLTYPE epw_Weather_SetOpenIcons(EPWeather* _this, LONG64 dwTaskbar, LONG64 dwFlyout, LONG64 bRefresh)
 {
@@ -1831,7 +1705,7 @@ HRESULT STDMETHODCALLTYPE epw_Weather_Initialize(EPWeather* _this, WCHAR wszName
     }
     InterlockedExchange64(&_this->dwTemperatureUnit, dwTemperatureUnit);
 
-    if (dwProvider < 0 || dwProvider >= EP_WEATHER_NUM_PROVIDERS)
+    if (!EP_WEATHER_IS_OPEN_PROVIDER(dwProvider))
     {
         return E_INVALIDARG;
     }

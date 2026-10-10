@@ -135,8 +135,9 @@ test('settings strings referenced by the weather entries exist', () => {
             assert.ok(sym, name + ': no IDS_ for ' + id);
             assert.match(rc, new RegExp('^\\s+' + sym + '\\s+"', 'm'), sym + ' has no English string');
         }
-        // combo has 6 options and 6 x-lines; both key fields are present
-        assert.match(reg, /;c 6 %R:1560%\r?\n(;x \d %R:156\d%\r?\n){6}"WeatherProvider"=dword:00000001/);
+        // combo has 5 options (Open-Meteo is the default, there is no Google any more) and both key fields are present
+        assert.match(reg, /;c 5 %R:1560%\r?\n(;x \d %R:156\d%\r?\n){5}"WeatherProvider"=dword:00000002/);
+        assert.doesNotMatch(reg, /WeatherIconPack/);
         assert.match(reg, /"WeatherApiKeyOpenWeatherMap"=""/);
         assert.match(reg, /"WeatherApiKeyWeatherApi"=""/);
         void block;
@@ -148,4 +149,14 @@ test('registry value names match between the settings pages and dllmain.c', () =
     for (const v of ['WeatherApiKeyOpenWeatherMap', 'WeatherApiKeyWeatherApi', 'WeatherProvider']) {
         assert.ok(dll.includes('"' + v + '"') || dll.includes('L"' + v + '"') || dll.includes('TEXT("' + v + '")'), v + ' not read by dllmain.c');
     }
+});
+
+test('the Google source and the Microsoft/Google icon pack setting are gone', () => {
+    assert.ok(!fs.existsSync(path.join(host, 'ep_weather_provider_google_script.h')));
+    assert.ok(!fs.existsSync(path.join(host, 'ep_weather_provider_google_html.h')));
+    assert.doesNotMatch(read(host, 'ep_weather.h'), /PROVIDER_GOOGLE|ICONPACK/);
+    assert.doesNotMatch(read(host, 'ep_weather_host.c'), /EP_WEATHER_PROVIDER_GOOGLE|provider_google/);
+    const dll = read(repo, 'ExplorerPatcher', 'dllmain.c');
+    assert.doesNotMatch(dll, /WeatherIconPack|PROVIDER_GOOGLE/);
+    assert.match(dll, /DWORD dwWeatherProvider = EP_WEATHER_PROVIDER_OPENMETEO;/);
 });

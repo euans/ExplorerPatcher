@@ -48,9 +48,9 @@ DEFINE_GUID(IID_IEPWeather,
 
 #define EP_WEATHER_NUM_PROVIDERS 7
 #define EP_WEATHER_PROVIDER_TEST 0
-#define EP_WEATHER_PROVIDER_GOOGLE 1
-// The providers below do not scrape a web page: ep_weather_provider_open.c builds a local page that calls the
-// provider's API (see provider_open/), so they all share one code path in the host.
+// 1 used to be the Google web page scraper (removed). The ids below stay as they are so stored settings keep working.
+// Every provider has ep_weather_provider_open.c build a local page that calls the provider's API (see provider_open/),
+// so they all share one code path in the host.
 #define EP_WEATHER_PROVIDER_OPENMETEO 2
 #define EP_WEATHER_PROVIDER_NWS 3
 #define EP_WEATHER_PROVIDER_WTTRIN 4
@@ -83,10 +83,7 @@ DEFINE_GUID(IID_IEPWeather,
 #define EP_WEATHER_HEIGHT 353
 #define EP_WEATHER_WIDTH 673
 
-#define EP_WEATHER_ICONPACK_MICROSOFT 0
-#define EP_WEATHER_ICONPACK_GOOGLE 1
-
-// Icon sets of the non-Google providers (ep_weather_provider_open.c); chosen separately for the taskbar and the flyout.
+// Icon sets (ep_weather_provider_open.c); chosen separately for the taskbar and the flyout.
 #define EP_WEATHER_OPENICONS_COLOR 0
 #define EP_WEATHER_OPENICONS_WHITE 1
 #define EP_WEATHER_OPENICONS_PIXEL 2

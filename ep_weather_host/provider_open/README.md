@@ -1,6 +1,6 @@
 # Alternate weather providers
 
-The Google provider scrapes `google.com/search`. The providers here call a weather **API** instead:
+ExplorerPatcher's original weather widget scraped `google.com/search`; that source has been removed. Every provider here calls a weather **API** instead:
 
 | Id | Provider | Key | Coverage |
 |----|----------|-----|----------|
@@ -10,7 +10,7 @@ The Google provider scrapes `google.com/search`. The providers here call a weath
 | 5 | [OpenWeatherMap](https://openweathermap.org/api) | **required** | worldwide |
 | 6 | [WeatherAPI.com](https://www.weatherapi.com/) | **required** | worldwide |
 
-Ids match `EP_WEATHER_PROVIDER_*` in `../ep_weather.h`. Google stays provider 1 and the default.
+Ids match `EP_WEATHER_PROVIDER_*` in `../ep_weather.h`. Open-Meteo is the default. Id 1 was Google; a stored `1` is treated as Open-Meteo.
 
 ## How it works
 
@@ -22,7 +22,7 @@ weather.html + providers.js + ui.js     runs inside the host's WebView2: fetches
         |  ExecuteScript("ep_weather_poll()")  every 500 ms
         v
 ep_weather_host.c            "ep_pending" -> poll again, "ep_error:..." -> error page,
-                             otherwise the same '#'-separated payload as the Google script
+                             otherwise a '#'-separated payload (see ui.js)
 ```
 
 * `providers.js` - one adapter per API, all returning the same metric model (documented at the top of the
@@ -46,7 +46,9 @@ Under `HKCU\Software\ExplorerPatcher` (also on the Weather page of the settings)
 
 | Value | Type | Meaning |
 |-------|------|---------|
-| `WeatherProvider` | DWORD | 1 Google (default), 2-6 as in the table above |
+| `WeatherProvider` | DWORD | 2-6 as in the table above (default 2) |
+| `WeatherOpenIconsTaskbar` | DWORD | icon set of the taskbar widget: 0 colorful (default), 1 white, 2 pixel, 3 Material (white), 4 Material (color) |
+| `WeatherOpenIconsFlyout` | DWORD | icon set of the flyout, same values |
 | `WeatherApiKeyOpenWeatherMap` | string | key used when provider 5 is selected |
 | `WeatherApiKeyWeatherApi` | string | key used when provider 6 is selected |
 
@@ -78,5 +80,4 @@ node test/build_preview.js 2 "Chicago, IL" F "" dark fixed   # writes test/previ
 * Condition text from Open-Meteo and NWS is English only (they return codes / English text). OpenWeatherMap,
   WeatherAPI.com and wttr.in honour the `WeatherLanguage` setting. Flyout labels ("Feels like"...) are English.
 * "Current location" is IP based (geojs.io, then ipwho.is) unless precise geolocation is enabled in the host.
-* The Microsoft/Google icon pack setting only applies to the Google provider.
 * wttr.in is a community service without an SLA; OpenWeatherMap keys can take a couple of hours to activate.

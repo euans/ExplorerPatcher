@@ -130,12 +130,11 @@ DWORD dwWeatherTheme = 0;
 DWORD dwWeatherGeolocationMode = 0;
 DWORD dwWeatherWindowCornerPreference = DWMWCP_ROUND;
 DWORD dwWeatherDevMode = FALSE;
-DWORD dwWeatherIconPack = EP_WEATHER_ICONPACK_MICROSOFT;
 DWORD dwWeatherToLeft = 0;
 DWORD dwWeatherContentsMode = 0;
 DWORD dwWeatherZoomFactor = 0;
-DWORD dwWeatherProvider = EP_WEATHER_PROVIDER_GOOGLE;
-// Icon sets (EP_WEATHER_OPENICONS_*) used by the non-Google providers, for the taskbar widget and for the flyout.
+DWORD dwWeatherProvider = EP_WEATHER_PROVIDER_OPENMETEO;
+// Icon sets (EP_WEATHER_OPENICONS_*) for the taskbar widget and for the flyout.
 DWORD dwWeatherOpenIconsTaskbar = EP_WEATHER_OPENICONS_COLOR;
 DWORD dwWeatherOpenIconsFlyout = EP_WEATHER_OPENICONS_COLOR;
 // API keys of the weather providers that need one, indexed by provider id. Stored in the registry (see below),
@@ -4280,7 +4279,6 @@ SIZE WINAPI PeopleButton_CalculateMinimumSizeHook(void* _this, SIZE* pSz)
                     epw->lpVtbl->SetTerm(epw, MAX_PATH * sizeof(WCHAR), wszWeatherTerm);
                     epw->lpVtbl->SetLanguage(epw, MAX_PATH * sizeof(WCHAR), wszWeatherLanguage);
                     epw->lpVtbl->SetDevMode(epw, dwWeatherDevMode, FALSE);
-                    epw->lpVtbl->SetIconPack(epw, dwWeatherIconPack, FALSE);
                     epw->lpVtbl->SetOpenIcons(epw, dwWeatherOpenIconsTaskbar, dwWeatherOpenIconsFlyout, FALSE);
                     for (int i = 0; i < ARRAYSIZE(WeatherApiKeyValues); i++)
                     {
@@ -6501,9 +6499,10 @@ void WINAPI LoadSettings(LPARAM lParam)
             NULL,
             &dwWeatherProvider,
             &dwSize
-        ) != ERROR_SUCCESS || dwWeatherProvider == EP_WEATHER_PROVIDER_TEST || dwWeatherProvider >= EP_WEATHER_NUM_PROVIDERS)
+        ) != ERROR_SUCCESS || !EP_WEATHER_IS_OPEN_PROVIDER(dwWeatherProvider))
         {
-            dwWeatherProvider = EP_WEATHER_PROVIDER_GOOGLE;
+            // Also catches 1, the removed Google source, which older settings may still hold.
+            dwWeatherProvider = EP_WEATHER_PROVIDER_OPENMETEO;
         }
         if (dwWeatherProvider != dwOldWeatherProvider && epw)
         {
@@ -6594,24 +6593,6 @@ void WINAPI LoadSettings(LPARAM lParam)
             if (epw)
             {
                 epw->lpVtbl->SetDevMode(epw, (LONG64)dwWeatherDevMode, TRUE);
-            }
-        }
-
-        DWORD dwOldWeatherIconPack = dwWeatherIconPack;
-        dwSize = sizeof(DWORD);
-        RegQueryValueExW(
-            hKey,
-            TEXT("WeatherIconPack"),
-            0,
-            NULL,
-            &dwWeatherIconPack,
-            &dwSize
-        );
-        if (dwWeatherIconPack != dwOldWeatherIconPack && PeopleButton_LastHWND)
-        {
-            if (epw)
-            {
-                epw->lpVtbl->SetIconPack(epw, (LONG64)dwWeatherIconPack, TRUE);
             }
         }
 
