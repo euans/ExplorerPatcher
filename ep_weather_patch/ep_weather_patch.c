@@ -30,16 +30,20 @@
 #define DOSMODE_OFFSET 78   // same value as ExplorerPatcher\def.h
 #define STAMP_LEN 32
 
+// `marker` is a string that only builds of this patch contain (ASCII or UTF-16), used to tell our own files from
+// the originals when deciding what to save as "originals". The stub has none (it is judged by the host DLL).
 static const struct
 {
     LPCWSTR name;
     UINT id;
+    const char* marker;
 } g_files[] = {
-    { L"ExplorerPatcher.amd64.dll", IDR_EP_CLIENT },
-    { L"ep_gui.dll", IDR_EP_GUI },
-    { L"ep_weather_host.dll", IDR_EP_HOST },
-    { L"ep_weather_host_stub.dll", IDR_EP_STUB },
+    { L"ExplorerPatcher.amd64.dll", IDR_EP_CLIENT, "WeatherApiKeyOpenWeatherMap" },
+    { L"ep_gui.dll", IDR_EP_GUI, "OpenWeatherMap API key" },
+    { L"ep_weather_host.dll", IDR_EP_HOST, "ep_weather_poll" },
+    { L"ep_weather_host_stub.dll", IDR_EP_STUB, NULL },
 };
+#define MARKER_CLIENT "WeatherApiKeyOpenWeatherMap"   // also what C:\Windows\dxgi.dll (a copy of the client) contains
 #define NUM_FILES ((int)(sizeof(g_files) / sizeof(g_files[0])))
 
 static WCHAR g_installDir[MAX_PATH];
@@ -131,6 +135,28 @@ static BOOL SameContent(LPCWSTR path, const BYTE* data, DWORD cb)
     BOOL same = (ccb == cb) && !memcmp(cur, data, cb);
     free(cur);
     return same;
+}
+
+// TRUE when the file contains `marker` as ASCII or as UTF-16 (resource strings are UTF-16).
+static BOOL ContainsMarker(LPCWSTR path, const char* marker)
+{
+    BYTE* d = NULL;
+    DWORD cb = 0;
+    if (!marker || !ReadAll(path, &d, &cb)) return FALSE;
+    size_t n = strlen(marker);
+    BOOL found = FALSE;
+    for (DWORD i = 0; !found && i + n <= cb; i++) found = !memcmp(d + i, marker, n);
+    if (!found && cb >= 2 * n)
+    {
+        for (DWORD i = 0; !found && i + 2 * n <= cb; i++)
+        {
+            size_t k = 0;
+            while (k < n && d[i + 2 * k] == (BYTE)marker[k] && d[i + 2 * k + 1] == 0) k++;
+            found = (k == n);
+        }
+    }
+    free(d);
+    return found;
 }
 
 static BOOL GetPayload(UINT id, const BYTE** pp, DWORD* pcb)
@@ -390,16 +416,40 @@ static BOOL Install(void)
     Join(bakWin, g_backupDir, L"Windows");
     EnsureDir(bakPf);
     EnsureDir(bakWin);
+    // A file that is already one of ours (an earlier build of this patch, e.g. from a test script) is not an original
+    // and must never be saved as one, or "uninstall" would put our own files back.
+    WCHAR hostPath[MAX_PATH];
+    Join(hostPath, g_installDir, L"ep_weather_host.dll");
+    BOOL hostIsOurs = ContainsMarker(hostPath, "ep_weather_poll"), skippedOurs = FALSE;
+    // Saved "originals" that are themselves our files were put there by an older version of this patch (it did not
+    // check). Drop them so the genuine files can be saved in their place.
+    WCHAR bakHost[MAX_PATH];
+    Join(bakHost, bakPf, L"ep_weather_host.dll");
+    BOOL bakHostIsOurs = ContainsMarker(bakHost, "ep_weather_poll");
     for (int i = 0; i < NUM_FILES; i++)
     {
         const BYTE* p; DWORD cb;
         GetPayload(g_files[i].id, &p, &cb);
         Join(path, g_installDir, g_files[i].name);
         Join(bak, bakPf, g_files[i].name);
+        if (Exists(bak) && (g_files[i].marker ? ContainsMarker(bak, g_files[i].marker) : bakHostIsOurs))
+        {
+            LogW("Saved original is one of our own files, discarding it: ", bak);
+            DeleteFileW(bak);
+        }
+        BOOL ours = g_files[i].marker ? ContainsMarker(path, g_files[i].marker) : hostIsOurs;
+        if (ours) { skippedOurs |= !Exists(bak); continue; }
         if (Exists(path) && !Exists(bak) && !SameContent(path, p, cb)) CopyFileW(path, bak, TRUE);
     }
     Join(bakDxgi, bakWin, L"dxgi.dll");
-    if (!Exists(bakDxgi) && !SameContent(dxgi, dxgiData, dxgiCb)) CopyFileW(dxgi, bakDxgi, TRUE);
+    if (Exists(bakDxgi) && ContainsMarker(bakDxgi, MARKER_CLIENT))
+    {
+        LogW("Saved original is one of our own files, discarding it: ", bakDxgi);
+        DeleteFileW(bakDxgi);
+    }
+    if (ContainsMarker(dxgi, MARKER_CLIENT)) skippedOurs |= !Exists(bakDxgi);
+    else if (!Exists(bakDxgi) && !SameContent(dxgi, dxgiData, dxgiCb)) CopyFileW(dxgi, bakDxgi, TRUE);
+    if (skippedOurs) Log("NOTE: some installed files are already from an earlier build of this patch, so they were not saved as originals.");
     LogW("Originals kept in ", g_backupDir);
 
     // 2. swap the files in; on any failure put everything back
