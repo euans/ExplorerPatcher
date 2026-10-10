@@ -243,8 +243,9 @@ LPWSTR epw_Open_BuildPage(EPWeather* _this)
     LPWSTR wszHtml = epw_Open_LoadText(IDR_EPW_OPEN_HTML);
     LPWSTR wszProviders = epw_Open_LoadText(IDR_EPW_OPEN_PROVIDERS_JS);
     LPWSTR wszUi = epw_Open_LoadText(IDR_EPW_OPEN_UI_JS);
+    LPWSTR wszI18n = epw_Open_LoadText(IDR_EPW_OPEN_I18N_JS);
 
-    if (wszHtml && wszProviders && wszUi)
+    if (wszHtml && wszProviders && wszUi && wszI18n)
     {
         LPWSTR pMarker = wcsstr(wszHtml, wszMarker);
         if (pMarker)
@@ -255,6 +256,8 @@ LPWSTR epw_Open_BuildPage(EPWeather* _this)
             epw_Open_AppendIcons(_this, &b);
             epw_Buf_AppendZ(&b, L"</script>\n<script>\n");
             epw_Buf_AppendZ(&b, wszProviders);
+            epw_Buf_AppendZ(&b, L"\n</script>\n<script>\n");
+            epw_Buf_AppendZ(&b, wszI18n);
             epw_Buf_AppendZ(&b, L"\n</script>\n<script>\n");
             epw_Buf_AppendZ(&b, wszUi);
             epw_Buf_AppendZ(&b, L"\n</script>\n");
@@ -269,6 +272,7 @@ LPWSTR epw_Open_BuildPage(EPWeather* _this)
     free(wszHtml);
     free(wszProviders);
     free(wszUi);
+    free(wszI18n);
 
     if (b.bFailed)
     {

@@ -31,6 +31,9 @@
         try { return Intl.DateTimeFormat.supportedLocalesOf([cfg.lang]).length ? cfg.lang : 'en'; } catch (e) { return 'en'; }
     })();
     const fahrenheit = cfg.unit === 'F';
+    // Labels and Open-Meteo condition names in the chosen language (English when there is no translation, see i18n.js).
+    const T = window.EP_I18N ? window.EP_I18N.forLanguage(cfg.lang) : { ui: null, translate: (s) => s };
+    const ui = T.ui || { feels: 'Feels like', humidity: 'Humidity', wind: 'Wind', pressure: 'Pressure', now: 'Now', today: 'Today', dataBy: 'Weather data by ', updated: 'Updated ', dirs: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] };
 
     // ------------------------------------------------------------ formatting
 
@@ -42,8 +45,7 @@
     function wind(m) {
         if (m.windKph === null || m.windKph === undefined) return '–';
         const speed = fahrenheit ? Math.round(m.windKph / 1.609) + ' mph' : Math.round(m.windKph) + ' km/h';
-        const dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-        return speed + (m.windDir === null || m.windDir === undefined ? '' : ' ' + dirs[Math.round(m.windDir / 45) % 8]);
+        return speed + (m.windDir === null || m.windDir === undefined ? '' : ' ' + ui.dirs[Math.round(m.windDir / 45) % 8]);
     }
 
     function pressure(m) {
@@ -75,22 +77,22 @@
         $('nowIcon').src = icons[m.icon] || '';
         $('temp').textContent = deg(m.tempC);
         $('unit').textContent = unitLabel();
-        $('text').textContent = m.text;
+        $('text').textContent = T.translate(m.text);
         $('place').textContent = m.place;
 
         const facts = $('facts');
         const rows = [
-            ['Feels like', m.feelsC === null || m.feelsC === undefined ? null : deg(m.feelsC) + '°'],
-            ['Humidity', m.humidity === null || m.humidity === undefined ? null : Math.round(m.humidity) + '%'],
-            ['Wind', wind(m)],
-            ['Pressure', pressure(m)]
+            [ui.feels, m.feelsC === null || m.feelsC === undefined ? null : deg(m.feelsC) + '°'],
+            [ui.humidity, m.humidity === null || m.humidity === undefined ? null : Math.round(m.humidity) + '%'],
+            [ui.wind, wind(m)],
+            [ui.pressure, pressure(m)]
         ].filter(r => r[1] !== null);
         rows.forEach(r => { facts.appendChild(el('dt', '', r[0])); facts.appendChild(el('dd', '', r[1])); });
 
         const hourly = $('hourly');
         m.hourly.slice(0, 8).forEach((h, i) => {
             const d = el('div', 'hour');
-            d.appendChild(el('div', 't', i === 0 && h.t > m.nowLocal - 45 * 60000 && h.t <= m.nowLocal + 15 * 60000 ? 'Now' : hourFmt.format(h.t)));
+            d.appendChild(el('div', 't', i === 0 && h.t > m.nowLocal - 45 * 60000 && h.t <= m.nowLocal + 15 * 60000 ? ui.now : hourFmt.format(h.t)));
             d.appendChild(iconImg(h.icon));
             d.appendChild(el('div', 'v', deg(h.tempC) + '°'));
             d.appendChild(el('div', 'p', h.pop ? h.pop + '%' : ''));
@@ -105,8 +107,8 @@
         days.forEach(dd => {
             const row = el('div', 'day');
             const isToday = new Date(dd.t).toISOString().slice(0, 10) === today;
-            row.appendChild(el('div', 'd', isToday && lang.slice(0, 2) === 'en' ? 'Today' : dayFmt.format(dd.t)));
-            row.appendChild(iconImg(dd.icon, dd.text));
+            row.appendChild(el('div', 'd', isToday && (lang.slice(0, 2) === 'en' || T.translated) ? ui.today : dayFmt.format(dd.t)));
+            row.appendChild(iconImg(dd.icon, T.translate(dd.text)));
             row.appendChild(el('div', 'p', dd.pop ? dd.pop + '%' : ''));
             const bar = el('div', 'bar');
             const fill = el('i');
@@ -122,12 +124,12 @@
         });
 
         const src = el('span');
-        src.appendChild(document.createTextNode('Weather data by '));
+        src.appendChild(document.createTextNode(ui.dataBy));
         const a = el('a', '', m.source.name);
         a.href = m.source.url;
         src.appendChild(a);
         $('source').replaceWith(src);
-        $('updated').textContent = 'Updated ' + new Date().toLocaleTimeString(lang, { hour: 'numeric', minute: '2-digit' });
+        $('updated').textContent = ui.updated + new Date().toLocaleTimeString(lang, { hour: 'numeric', minute: '2-digit' });
         $('app').hidden = false;
     }
 
@@ -198,7 +200,7 @@
         try {
             const m = await window.EPW.fetchWeather(cfg);
             render(m);
-            result = payload(deg(m.tempC), unitLabel(), m.text, m.place, await iconHex(m.icon, cfg.iconSize));
+            result = payload(deg(m.tempC), unitLabel(), T.translate(m.text), m.place, await iconHex(m.icon, cfg.iconSize));
         } catch (err) {
             try {
                 if (err && (err.kind === 'key' || err.kind === 'location' || err.kind === 'unsupported')) await softError(err);

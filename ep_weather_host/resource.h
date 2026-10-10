@@ -6,6 +6,7 @@
 #define IDR_EPW_OPEN_HTML               201
 #define IDR_EPW_OPEN_PROVIDERS_JS       202
 #define IDR_EPW_OPEN_UI_JS              203
+#define IDR_EPW_OPEN_I18N_JS            204
 
 // Condition icons for those providers (provider_open\icons\*.png)
 #define IDR_EPW_ICON_CLEAR_DAY          210

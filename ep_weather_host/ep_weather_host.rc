@@ -91,6 +91,7 @@ END
 IDR_EPW_OPEN_HTML           RCDATA  "provider_open\\weather.html"
 IDR_EPW_OPEN_PROVIDERS_JS   RCDATA  "provider_open\\providers.js"
 IDR_EPW_OPEN_UI_JS          RCDATA  "provider_open\\ui.js"
+IDR_EPW_OPEN_I18N_JS        RCDATA  "provider_open\\i18n.js"
 
 IDR_EPW_ICON_CLEAR_DAY      RCDATA  "provider_open\\icons\\clear-day.png"
 IDR_EPW_ICON_CLEAR_NIGHT    RCDATA  "provider_open\\icons\\clear-night.png"

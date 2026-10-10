@@ -95,7 +95,7 @@ test('resource ids are unique and every RCDATA file exists', () => {
 test('page template has exactly one script marker and the scripts are safe to inline', () => {
     const html = read(open, 'weather.html');
     assert.equal(html.split('<!--EP_SCRIPT-->').length - 1, 1);
-    for (const f of ['providers.js', 'ui.js']) {
+    for (const f of ['providers.js', 'i18n.js', 'ui.js']) {
         const js = read(open, f);
         assert.ok(!/<\/script/i.test(js), f + ' contains </script');
         assert.ok(!/<!--/.test(js), f + ' contains an HTML comment opener');
@@ -104,7 +104,7 @@ test('page template has exactly one script marker and the scripts are safe to in
 });
 
 test('every file is valid UTF-8 without a BOM surprise (the host strips a BOM, but keep them clean)', () => {
-    for (const f of ['weather.html', 'providers.js', 'ui.js']) {
+    for (const f of ['weather.html', 'providers.js', 'i18n.js', 'ui.js']) {
         const b = fs.readFileSync(path.join(open, f));
         assert.ok(!(b[0] === 0xEF && b[1] === 0xBB), f + ' has a BOM');
         assert.equal(Buffer.from(b.toString('utf8'), 'utf8').equals(b), true, f + ' is not valid UTF-8');
@@ -159,4 +159,29 @@ test('the Google source and the Microsoft/Google icon pack setting are gone', ()
     const dll = read(repo, 'ExplorerPatcher', 'dllmain.c');
     assert.doesNotMatch(dll, /WeatherIconPack|PROVIDER_GOOGLE/);
     assert.match(dll, /DWORD dwWeatherProvider = EP_WEATHER_PROVIDER_OPENMETEO;/);
+});
+
+test('every translation is complete and covers all Open-Meteo condition texts', () => {
+    const I18N = require('../i18n.js');
+    const { fromWMO } = EPW._internal;
+    const english = new Set([fromWMO(0, 0).text, 'Sunny', 'Unknown']);
+    for (let code = 0; code < 100; code++) english.add(fromWMO(code, 1).text);
+    english.delete('Unknown');
+    english.add('Unknown');
+    for (const t of english) assert.ok(I18N.KEYS.includes(t), 'no translation key for "' + t + '"');
+    for (const [lang, l] of Object.entries(I18N.LANGS)) {
+        assert.deepEqual(Object.keys(l.ui).sort(), Object.keys(I18N.EN.ui).sort(), lang + ' ui keys');
+        assert.equal(l.ui.dirs.length, 8, lang + ' compass directions');
+        assert.deepEqual(Object.keys(l.cond), I18N.KEYS, lang + ' condition keys');
+        for (const [k, v] of Object.entries(l.cond)) assert.ok(v && v.trim(), lang + ': ' + k);
+        for (const v of Object.values(l.ui).flat()) assert.ok(String(v).trim().length > 0, lang + ' empty label');
+    }
+    const de = I18N.forLanguage('de-AT');
+    assert.equal(de.ui.humidity, 'Luftfeuchte');
+    assert.equal(de.translate('Light rain'), 'Leichter Regen');
+    assert.equal(de.translate('Something else'), 'Something else');
+    const xx = I18N.forLanguage('xx');
+    assert.equal(xx.ui.humidity, 'Humidity');
+    assert.equal(xx.translate('Light rain'), 'Light rain');
+    assert.equal(xx.translated, false);
 });
