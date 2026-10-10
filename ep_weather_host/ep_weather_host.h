@@ -64,6 +64,7 @@ typedef interface EPWeather
     LONG64 dwOpenIconsFlyout; // interlocked, EP_WEATHER_OPENICONS_*
     LONG64 dwZoomFactor;
     LONG64 bShowingErrorPage; // interlocked; only meaningful for the providers in ep_weather_provider_open.c
+    LONG64 dwFetchFailures; // interlocked; consecutive failed fetches, drives the retry back-off
     SRWLOCK lockApiKeys; // protects wszApiKeys
     WCHAR wszApiKeys[EP_WEATHER_NUM_PROVIDERS][EP_WEATHER_APIKEY_MAX]; // indexed by provider
 

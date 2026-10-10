@@ -47,6 +47,7 @@ static WCHAR g_winDir[MAX_PATH];
 static WCHAR g_backupDir[MAX_PATH];
 static BOOL g_silent, g_force, g_sandbox, g_uninstall;
 static FILE* g_log;
+static WCHAR g_lastError[512];   // the last "ERROR: ..." line, shown in the failure dialog
 
 // ---------------------------------------------------------------------------------------------- helpers
 
@@ -59,6 +60,15 @@ static void Log(const char* fmt, ...)
     va_end(ap);
     printf("%s\n", buf);
     if (g_log) { fprintf(g_log, "%s\n", buf); fflush(g_log); }
+    if (!strncmp(buf, "ERROR: ", 7)) MultiByteToWideChar(CP_UTF8, 0, buf + 7, -1, g_lastError, ARRAYSIZE(g_lastError));
+}
+
+// Logs why a file operation failed, with the Windows error code, so a failure can be diagnosed from the log alone.
+static void LogFail(const char* what, LPCWSTR path, DWORD err)
+{
+    char utf8[MAX_PATH * 3];
+    WideCharToMultiByte(CP_UTF8, 0, path, -1, utf8, sizeof(utf8), NULL, NULL);
+    Log("  Windows error %lu: %s %s", err, what, utf8);
 }
 
 static void LogW(const char* prefix, LPCWSTR path)
@@ -153,13 +163,15 @@ static int SwapIn(LPCWSTR dst, const BYTE* data, DWORD cb)
     {
         swprintf_s(old, MAX_PATH, L"%s.altweather-old-%02d%02d%02d-%d", dst, st.wHour, st.wMinute, st.wSecond, n);
     }
-    if (!WriteAll(tmp, data, cb)) return -1;
+    if (!WriteAll(tmp, data, cb)) { LogFail("could not write", tmp, GetLastError()); return -1; }
     BOOL hadOld = Exists(dst);
-    if (hadOld && !MoveFileW(dst, old)) { DeleteFileW(tmp); return -1; }
+    if (hadOld && !MoveFileW(dst, old)) { DWORD e = GetLastError(); DeleteFileW(tmp); LogFail("could not rename", dst, e); return -1; }
     if (!MoveFileW(tmp, dst))
     {
+        DWORD e = GetLastError();
         if (hadOld) MoveFileW(old, dst);
         DeleteFileW(tmp);
+        LogFail("could not move the new file into place:", dst, e);
         return -1;
     }
     if (g_numDone < 16)
@@ -449,7 +461,12 @@ static BOOL Uninstall(void)
         any = TRUE;
     }
     if (!ok) { UndoSwaps(); Log("ERROR: could not restore every file; undone."); return FALSE; }
-    if (!any) { Log("Nothing to restore: no saved originals were found."); return FALSE; }
+    if (!any)
+    {
+        LogW("Looked for the saved originals in ", g_backupDir);
+        Log("ERROR: no saved original files were found, so there is nothing to restore. Reinstall ExplorerPatcher from its official release to get the original files back.");
+        return FALSE;
+    }
     if (!g_sandbox)
     {
         Join(path, g_installDir, L"ep_weather_host_stub.dll"); Register(path);
@@ -533,8 +550,9 @@ int wmain(int argc, wchar_t** argv)
     if (ok) Msg(g_uninstall ? L"The original weather files have been restored." : L"Done. Open ExplorerPatcher Properties > Weather to choose a weather source.", MB_OK | MB_ICONINFORMATION);
     else
     {
-        WCHAR m[MAX_PATH + 100];
-        swprintf_s(m, MAX_PATH + 100, L"The update could not be completed. Nothing was left half-changed.\n\nLog: %s", logPath);
+        WCHAR m[MAX_PATH + 800];
+        swprintf_s(m, ARRAYSIZE(m), L"%s could not be completed. Nothing was left half-changed.\n\n%s%s%s\nLog: %s",
+            g_uninstall ? L"The restore" : L"The update", g_lastError[0] ? L"Reason: " : L"", g_lastError, g_lastError[0] ? L"\n" : L"", logPath);
         Msg(m, MB_OK | MB_ICONERROR);
     }
     return ok ? 0 : 1;

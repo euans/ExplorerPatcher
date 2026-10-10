@@ -286,6 +286,16 @@ HRESULT STDMETHODCALLTYPE ICoreWebView2_CreateCoreWebView2EnvironmentCompleted(G
 
 HRESULT STDMETHODCALLTYPE _epw_Weather_NavigateToError(EPWeather* _this)
 {
+    if (EP_WEATHER_IS_OPEN_PROVIDER(InterlockedAdd64(&_this->dwProvider, 0)))
+    {
+        // Right after logon the network is often not up yet, so the first fetches fail. Without this the widget would
+        // sit on the error page until the next scheduled update (20 minutes by default). Retry with a back-off:
+        // 10 s, 20 s, 40 s, 80 s, 160 s, then every 5 minutes until a fetch works (see dwFetchFailures).
+        LONG64 n = InterlockedIncrement64(&_this->dwFetchFailures);
+        UINT uDelay = n >= 6 ? 300000 : (10000u << (n - 1));
+        printf("[Retry] Fetch failure %lld, trying again in %u ms.\n", n, uDelay);
+        SetTimer(_this->hWnd, EP_WEATHER_TIMER_REQUEST_REFRESH, uDelay, NULL);
+    }
     _ep_Weather_ReboundBrowser(_this, TRUE);
     InterlockedExchange64(&_this->bIsNavigatingToError, TRUE);
     InterlockedExchange64(&_this->bShowingErrorPage, TRUE);
@@ -739,6 +749,7 @@ HRESULT STDMETHODCALLTYPE ICoreWebView2_ExecuteScriptCompleted(GenericObjectWith
         else
         {
             GetLocalTime(&stLastUpdate);
+            InterlockedExchange64(&_this->dwFetchFailures, 0);
             HWND hGUI = FindWindowW(L"ExplorerPatcher_GUI_" _T(EP_CLSID), NULL);
             if (hGUI) InvalidateRect(hGUI, NULL, TRUE);
             InterlockedExchange64(&_this->bBrowserBusy, FALSE);
