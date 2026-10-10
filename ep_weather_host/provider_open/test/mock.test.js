@@ -48,8 +48,34 @@ test('OpenWeatherMap maps current, hourly and daily', async () => {
     assert.equal(m.hourly[1].pop, 60);
     assert.equal(m.daily.length, 2);
     assert.equal(m.daily[0].hiC, 16);
-    assert.match(calls[0], /appid=KEY123/);
-    assert.match(calls[0], /q=Paris/);
+    const weatherCall = calls.find(c => /data\/2\.5\/weather/.test(c));   // (the geocoder is tried first and is not mocked here)
+    assert.match(weatherCall, /appid=KEY123/);
+    assert.match(weatherCall, /q=Paris/);
+});
+
+const geocodeParma = { body: { results: [
+    { name: 'Parma', latitude: 44.8, longitude: 10.33, country_code: 'IT', country: 'Italy', admin1: 'Emilia-Romagna', timezone: 'Europe/Rome' },
+    { name: 'Parma', latitude: 41.4, longitude: -81.72, country_code: 'US', country: 'United States', admin1: 'Ohio', timezone: 'America/New_York' }] } };
+
+test('OpenWeatherMap resolves "city, state" through the geocoder instead of sending q=parma, oh', async () => {
+    const calls = mockFetch([[/geocoding-api/, geocodeParma], [/weather\?/, { body: owmCur }], [/forecast/, { body: owmFc }]]);
+    const m = await EPW.fetchWeather(cfg({ term: 'parma, oh' }));
+    const weatherCall = calls.find(c => /data\/2\.5\/weather/.test(c));
+    assert.match(weatherCall, /lat=41\.4&lon=-81\.72/);
+    assert.ok(!/q=/.test(weatherCall.replace('&appid', '')), 'must not use q=');
+    assert.equal(m.place, 'Parma, Ohio');
+});
+
+test('WeatherAPI.com sends coordinates from the geocoder for a "city, state" term', async () => {
+    const calls = mockFetch([[/geocoding-api/, geocodeParma], [/weatherapi\.com/, { status: 400, body: { error: { code: 1006, message: 'x' } } }]]);
+    await assert.rejects(EPW.fetchWeather(cfg({ provider: 6, term: 'parma, oh' })), (e) => e.kind === 'location');
+    assert.match(calls.find(c => /weatherapi\.com/.test(c)), /q=41\.4%2C-81\.72/);
+});
+
+test('OpenWeatherMap falls back to q= when the geocoder finds nothing', async () => {
+    const calls = mockFetch([[/geocoding-api/, { body: {} }], [/weather\?/, { body: owmCur }], [/forecast/, { body: owmFc }]]);
+    await EPW.fetchWeather(cfg({ term: 'Zzyzx' }));
+    assert.match(calls.find(c => /data\/2\.5\/weather/.test(c)), /q=Zzyzx/);
 });
 
 test('OpenWeatherMap uses zip= for 5 digit terms', async () => {

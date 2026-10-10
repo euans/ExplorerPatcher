@@ -294,6 +294,11 @@
         return cfg.term ? geocode(cfg.term, cfg.lang) : locateCurrent(cfg);
     }
 
+    // resolveLocation, but null instead of an error so a provider can fall back to its own free-text search.
+    async function locateOrNull(cfg) {
+        try { return await resolveLocation(cfg); } catch (e) { return null; }
+    }
+
     function requireKey(cfg, name) {
         if (!cfg.apiKey) throw new EPWError('key', name + ' needs an API key');
     }
@@ -477,12 +482,16 @@
         requireKey(cfg, 'OpenWeatherMap');
         const lang = enc((cfg.lang || 'en').toLowerCase());
         const key = '&units=metric&lang=' + lang + '&appid=' + enc(cfg.apiKey);
-        let where;
-        if (cfg.term) {
-            where = /^\d{5}$/.test(cfg.term.trim()) ? 'zip=' + enc(cfg.term.trim() + ',us') : 'q=' + enc(cfg.term);
+        let where, found = null;
+        if (cfg.term && /^\d{5}$/.test(cfg.term.trim())) {
+            where = 'zip=' + enc(cfg.term.trim() + ',us');
         } else {
-            const loc = await locateCurrent(cfg);
-            where = 'lat=' + loc.lat + '&lon=' + loc.lon;
+            // OpenWeatherMap's q= wants "city,state,country code" ("Parma,OH,US"); "parma, oh" would be read as a
+            // country code and not found. The shared geocoder understands what people type, so use its coordinates
+            // and only fall back to q= when it finds nothing.
+            found = await locateOrNull(cfg);
+            if (!found && !cfg.term) throw new EPWError('location', 'Could not work out your current location');
+            where = found ? 'lat=' + found.lat + '&lon=' + found.lon : 'q=' + enc(cfg.term);
         }
         let cur;
         try {
@@ -512,7 +521,7 @@
             days.set(k, d);
         });
         return {
-            place: cur.name + (cur.sys && cur.sys.country ? ', ' + cur.sys.country : ''),
+            place: found ? found.name : cur.name + (cur.sys && cur.sys.country ? ', ' + cur.sys.country : ''),
             tempC: cur.main.temp, feelsC: cur.main.feels_like, text: cap(w.description), icon: fromOWM(w.id, w.icon),
             humidity: cur.main.humidity, windKph: cur.wind ? cur.wind.speed * 3.6 : null, windDir: cur.wind ? cur.wind.deg : null,
             pressureHpa: cur.main.pressure, precipMm: cur.rain ? cur.rain['1h'] || null : null, nowLocal,
@@ -531,13 +540,13 @@
 
     async function weatherApi(cfg) {
         requireKey(cfg, 'WeatherAPI.com');
-        let q = cfg.term;
-        if (!q) {
-            if (cfg.geo) {
-                try { const p = await locateCurrent(cfg); q = p.lat + ',' + p.lon; } catch (e) { /* use IP */ }
-            }
-            q = q || 'auto:ip';
+        let q = null;
+        if (cfg.term || cfg.geo) {
+            // Same reasoning as OpenWeatherMap: coordinates from the shared geocoder beat a free-text match.
+            const found = await locateOrNull(cfg);
+            if (found) q = found.lat + ',' + found.lon;
         }
+        q = q || cfg.term || 'auto:ip';
         let r;
         try {
             r = await getJSON('https://api.weatherapi.com/v1/forecast.json?key=' + enc(cfg.apiKey) + '&q=' + enc(q) +
