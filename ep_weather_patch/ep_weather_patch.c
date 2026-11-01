@@ -137,6 +137,17 @@ static BOOL SameContent(LPCWSTR path, const BYTE* data, DWORD cb)
     return same;
 }
 
+// TRUE when both files exist and have identical content.
+static BOOL SameFile(LPCWSTR a, LPCWSTR b)
+{
+    BYTE* d = NULL;
+    DWORD cb = 0;
+    if (!ReadAll(a, &d, &cb)) return FALSE;
+    BOOL same = SameContent(b, d, cb);
+    free(d);
+    return same;
+}
+
 // TRUE when the file contains `marker` as ASCII or as UTF-16 (resource strings are UTF-16).
 static BOOL ContainsMarker(LPCWSTR path, const char* marker)
 {
@@ -439,7 +450,13 @@ static BOOL Install(void)
         }
         BOOL ours = g_files[i].marker ? ContainsMarker(path, g_files[i].marker) : hostIsOurs;
         if (ours) { skippedOurs |= !Exists(bak); continue; }
-        if (Exists(path) && !Exists(bak) && !SameContent(path, p, cb)) CopyFileW(path, bak, TRUE);
+        // A file that is not ours and not already this patch is what is installed now, so the saved original must be
+        // it, also when an older original was saved before (ExplorerPatcher itself was updated in between).
+        if (Exists(path) && !SameContent(path, p, cb) && !SameFile(path, bak))
+        {
+            if (Exists(bak)) LogW("Refreshing the saved original (ExplorerPatcher was updated): ", bak);
+            CopyFileW(path, bak, FALSE);
+        }
     }
     Join(bakDxgi, bakWin, L"dxgi.dll");
     if (Exists(bakDxgi) && ContainsMarker(bakDxgi, MARKER_CLIENT))
@@ -448,7 +465,11 @@ static BOOL Install(void)
         DeleteFileW(bakDxgi);
     }
     if (ContainsMarker(dxgi, MARKER_CLIENT)) skippedOurs |= !Exists(bakDxgi);
-    else if (!Exists(bakDxgi) && !SameContent(dxgi, dxgiData, dxgiCb)) CopyFileW(dxgi, bakDxgi, TRUE);
+    else if (!SameContent(dxgi, dxgiData, dxgiCb) && !SameFile(dxgi, bakDxgi))
+    {
+        if (Exists(bakDxgi)) LogW("Refreshing the saved original (ExplorerPatcher was updated): ", bakDxgi);
+        CopyFileW(dxgi, bakDxgi, FALSE);
+    }
     if (skippedOurs) Log("NOTE: some installed files are already from an earlier build of this patch, so they were not saved as originals.");
     LogW("Originals kept in ", g_backupDir);
 

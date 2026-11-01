@@ -1,12 +1,23 @@
 # Generates stamp.h from the staged build: the 32 character version stamp written into the DOS header of
-# C:\Windows\dxgi.dll ("<file version>.<first 16 hex of the sha256>", same shape the official installer uses)
-# and the Windows build numbers this patch was made for.
+# C:\Windows\dxgi.dll and the Windows build numbers this patch was made for.
+#
+# The stamp is "<file version>.<16 hex>". ExplorerPatcher's update check compares it with the stamp in the latest
+# official ep_setup.exe: a newer version is offered as an update, and so is an equal version whose hex part differs.
+# This patch is built from an official release, so when official_stamp.txt holds that release's stamp (same version
+# as the build) it is used as is; otherwise ExplorerPatcher would offer the official build as an "update" right after
+# patching. With no matching official_stamp.txt the hex part is the first 16 hex of the DLL's SHA-256.
 param([Parameter(Mandatory)][string]$Payload, [Parameter(Mandatory)][string]$Out)
 $ErrorActionPreference = 'Stop'
 $dll = Join-Path $Payload 'ExplorerPatcher.amd64.dll'
 $ver = (Get-Item $dll).VersionInfo.FileVersion
 $hash = (Get-FileHash $dll -Algorithm SHA256).Hash.ToLower()
 $stamp = "$ver.$($hash.Substring(0, 16))"
+$officialFile = Join-Path $PSScriptRoot 'official_stamp.txt'
+if (Test-Path $officialFile) {
+    $official = (Get-Content $officialFile -Raw).Trim()
+    if ($official.Length -eq 32 -and $official.StartsWith("$ver.")) { $stamp = $official; Write-Host "using the official release stamp" }
+    else { Write-Warning "official_stamp.txt ('$official') does not match build version $ver; ignoring it" }
+}
 if ($stamp.Length -ne 32) { throw "Stamp '$stamp' is not 32 characters" }
 $parts = $ver.Split('.')
 @"
