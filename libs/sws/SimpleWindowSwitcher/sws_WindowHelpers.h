@@ -356,7 +356,9 @@ inline DWORD32 sws_WindowHelpers_GetUBR()
 			&ubr,
 			&ubr_size
 		);
+		RegCloseKey(hKey);
 	}
+	return ubr;
 }
 
 inline DWORD32 sws_WindowHelpers_GetOSVersionAndUBR(PRTL_OSVERSIONINFOW lpRovi)

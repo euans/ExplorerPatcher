@@ -879,25 +879,41 @@ void ReportSuccessfulAnimationPatching()
 {
 #if WITH_SMA_PATCH_REPORT
     PSID pMainSid = NULL;
-    GetLogonSid(&pMainSid);
-    PSID pSecondaySid = NULL;
-    DeriveAppContainerSidFromAppContainerName(L"Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy", &pSecondaySid);
+    PSID pSecondarySid = NULL;
     PSECURITY_DESCRIPTOR pSecurityDescriptor = NULL;
-    if (PrepareSecurityDescriptor(pMainSid, STANDARD_RIGHTS_ALL | MUTEX_ALL_ACCESS, pSecondaySid, SYNCHRONIZE, &pSecurityDescriptor))
+    if (!GetLogonSid(&pMainSid))
     {
-        SECURITY_ATTRIBUTES SecurityAttributes;
-        ZeroMemory(&SecurityAttributes, sizeof(SecurityAttributes));
-        SecurityAttributes.nLength = sizeof(SECURITY_ATTRIBUTES);
-        SecurityAttributes.bInheritHandle = FALSE;
-        SecurityAttributes.lpSecurityDescriptor = pSecurityDescriptor;
-        if (CreateMutexW(&SecurityAttributes, FALSE, _T(EPStart10_AnimationsPatched)))
-        {
-            printf("[SMA] Advertising successful animations patching.\n");
-        }
-        free(pSecurityDescriptor);
+        printf("[SMA] GetLogonSid failed (error %lu).\n", GetLastError());
+        goto Cleanup;
     }
-    if (pMainSid) free(pMainSid);
-    if (pSecondaySid) FreeSid(pSecondaySid);
+    HRESULT hr = DeriveAppContainerSidFromAppContainerName(L"Microsoft.Windows.StartMenuExperienceHost_cw5n1h2txyewy", &pSecondarySid);
+    if (FAILED(hr))
+    {
+        printf("[SMA] DeriveAppContainerSidFromAppContainerName failed (HRESULT 0x%08lX).\n", (DWORD)hr);
+        goto Cleanup;
+    }
+    if (!PrepareSecurityDescriptor(pMainSid, STANDARD_RIGHTS_ALL | MUTEX_ALL_ACCESS, pSecondarySid, SYNCHRONIZE, &pSecurityDescriptor))
+    {
+        printf("[SMA] PrepareSecurityDescriptor failed (error %lu).\n", GetLastError());
+        goto Cleanup;
+    }
+    SECURITY_ATTRIBUTES SecurityAttributes;
+    ZeroMemory(&SecurityAttributes, sizeof(SecurityAttributes));
+    SecurityAttributes.nLength = sizeof(SECURITY_ATTRIBUTES);
+    SecurityAttributes.bInheritHandle = FALSE;
+    SecurityAttributes.lpSecurityDescriptor = pSecurityDescriptor;
+    if (CreateMutexW(&SecurityAttributes, FALSE, _T(EPStart10_AnimationsPatched)))
+    {
+        printf("[SMA] Advertising successful animations patching.\n");
+    }
+    else
+    {
+        printf("[SMA] CreateMutexW failed (error %lu).\n", GetLastError());
+    }
+Cleanup:
+    free(pSecurityDescriptor);
+    free(pMainSid);
+    if (pSecondarySid) FreeSid(pSecondarySid);
 #endif
 }
 #endif
@@ -2535,34 +2551,37 @@ static void HookImmersiveMenuFunctions(
         "xxxxxxxxxxxxxxxxx????xxx????xxx????xxxxxx????xx?????xxx"
     );
 #elif defined(_M_ARM64)
-    // ?? ?? 40 F9 43 03 1C 32 E4 03 ?? AA ?? ?? FF 97
-    //                                     ^^^^^^^^^^^
-    // Ref: ImmersiveContextMenuHelper::ApplyOwnerDrawToMenu()
-    PBYTE match = (PBYTE)FindPattern_4_(
-        pText + 2, cbText - 2,
-        "\x40\xF9\x43\x03\x1C\x32\xE4\x03\x00\xAA\x00\x00\xFF\x97",
-        "xxxxxxxx?x??xx"
+    // Recursive ApplyOwnerDrawToMenu() call, newest scheduling first. 29634+
+    // hoist options | 0x10 and reload W3 from the stack; older builds compute it here.
+    // Mask source registers and the entire BL immediate, not its direction/distance.
+    PBYTE match = (PBYTE)FindPatternBitMask_4_(
+        pText, cbText,
+        "\xE3\x03\x40\xB9\xE4\x03\x00\xAA\xE2\x03\x00\xAA\x00\x00\x00\x94\xE8\x03\x40\xB9\x00\x28\x00\xF9",
+        "\xFF\x03\xC0\xFF\xFF\xFF\xE0\xFF\xFF\xFF\xE0\xFF\x00\x00\x00\xFC\xFF\x03\xC0\xFF\x00\xFC\xFF\xFF",
+        24
     );
+    if (!match)
+    {
+        match = (PBYTE)FindPatternBitMask_4_(
+            pText, cbText,
+            "\x03\x00\x1C\x32\xE4\x03\x00\xAA\xE2\x03\x00\xAA\x00\x00\x00\x94",
+            "\x1F\xFC\xFF\xFF\xFF\xFF\xE0\xFF\xFF\xFF\xE0\xFF\x00\x00\x00\xFC",
+            16
+        );
+    }
+    if (!match)
+    {
+        match = (PBYTE)FindPatternBitMask_4_(
+            pText, cbText,
+            "\x02\x00\x40\xF9\x03\x00\x1C\x32\xE4\x03\x00\xAA\x00\x00\x00\x94",
+            "\x1F\x00\xC0\xFF\x1F\xFC\xFF\xFF\xFF\xFF\xE0\xFF\x00\x00\x00\xFC",
+            16
+        );
+    }
     if (match)
     {
-        match += 10;
+        match += 12;
         match = (PBYTE)ARM64_FollowBL((DWORD*)match);
-    }
-    else
-    {
-        // 43 03 1C 32 E4 03 ?? AA E2 03 ?? AA ?? ?? FF 97 // 27938
-        //                                     ^^^^^^^^^^^
-        // Ref: ImmersiveContextMenuHelper::ApplyOwnerDrawToMenu()
-        match = (PBYTE)FindPattern_4_(
-            pText, cbText,
-            "\x43\x03\x1C\x32\xE4\x03\x00\xAA\xE2\x03\x00\xAA\x00\x00\xFF\x97",
-            "xxxxxx?xxx?x??xx"
-        );
-        if (match)
-        {
-            match += 12;
-            match = (PBYTE)ARM64_FollowBL((DWORD*)match);
-        }
     }
 #endif
     if (match)
@@ -8343,9 +8362,6 @@ DEFINE_GUID(CLSID_FileExplorerContextMenuPresenterLegacy, 0x86CA1AA0, 0x34AA, 0x
 // {51668040-5E31-4023-BBE3-149163BD80F1}
 DEFINE_GUID(CLSID_FileExplorerContextMenuPresenter, 0x51668040, 0x5E31, 0x4023, 0xBB, 0xE3, 0x14, 0x91, 0x63, 0xBD, 0x80, 0xF1);
 
-// {37A472F7-63CF-4CCF-A88B-5231A3C7D8B6}
-DEFINE_GUID(IID_FileExplorerContextMenuPresenter2, 0x37A472F7, 0x63CF, 0x4CCF, 0xA8, 0x8B, 0x52, 0x31, 0xA3, 0xC7, 0xD8, 0xB6);
-
 HRESULT ExplorerFrame_CoCreateInstanceHook(REFCLSID rclsid, LPUNKNOWN pUnkOuter, DWORD dwClsContext, REFIID riid, LPVOID* ppv)
 {
     if (IsEqualCLSID(rclsid, &CLSID_XamlIslandViewAdapter))
@@ -8366,9 +8382,8 @@ HRESULT ExplorerFrame_CoCreateInstanceHook(REFCLSID rclsid, LPUNKNOWN pUnkOuter,
             return REGDB_E_CLASSNOTREG;
         }
     }
-    else if (IsEqualIID(riid, &IID_FileExplorerContextMenuPresenter2)
-        && (IsEqualCLSID(rclsid, &CLSID_FileExplorerContextMenuPresenterLegacy)
-            || IsEqualCLSID(rclsid, &CLSID_FileExplorerContextMenuPresenter)))
+    else if (IsEqualCLSID(rclsid, &CLSID_FileExplorerContextMenuPresenterLegacy)
+        || IsEqualCLSID(rclsid, &CLSID_FileExplorerContextMenuPresenter))
     {
         // Allow disabling the XAML context menu in CNscTree and CShellBrowser
         if (bDisableWindows11ContextMenu)
@@ -8385,14 +8400,9 @@ HRESULT ExplorerFrame_CoCreateInstanceHook(REFCLSID rclsid, LPUNKNOWN pUnkOuter,
 // {B306C5B1-B4F2-473C-B6FF-701B246CE2D2}
 DEFINE_GUID(SID_FileExplorerContextMenuPresenter, 0xB306C5B1, 0xB4F2, 0x473C, 0xB6, 0xFF, 0x70, 0x1B, 0x24, 0x6C, 0xE2, 0xD2);
 
-// {706461D1-AC5F-4730-BFE3-CAC6CAD5EF5E}
-DEFINE_GUID(IID_FileExplorerContextMenuPresenter, 0x706461D1, 0xAC5F, 0x4730, 0xBF, 0xE3, 0xCA, 0xC6, 0xCA, 0xD5, 0xEF, 0x5E);
-
 HRESULT WINAPI shell32_IUnknown_QueryServiceHook(IUnknown* punk, REFGUID guidService, REFIID riid, void** ppvOut)
 {
-    if (IsEqualGUID(guidService, &SID_FileExplorerContextMenuPresenter)
-        && (IsEqualGUID(riid, &IID_FileExplorerContextMenuPresenter)
-            || IsEqualGUID(riid, &IID_FileExplorerContextMenuPresenter2)))
+    if (IsEqualGUID(guidService, &SID_FileExplorerContextMenuPresenter))
     {
         // Allow disabling the XAML context menu in CDefView
         if (bDisableWindows11ContextMenu)
@@ -9248,7 +9258,8 @@ static void PatchAddressBarSizing(PBYTE pSearchBegin, size_t cbSearch)
     if (IsWindows11())
     {
         // 26100.9343+, 28000.3142+: _PositionChildWindows() calls _GetAdjustedClientRect().
-        // Follow the CALL at +14; the helper's RECT adjustments start at +25.
+        // Follow the CALL at +14. 29695+ drops its helper's redundant CALL prefix and post-call NOP:
+        // search the RECT adjustments at +19 first, then the older +25 layout.
         match = FindPattern(
             pSearchBegin,
             cbSearch,
@@ -9257,8 +9268,13 @@ static void PatchAddressBarSizing(PBYTE pSearchBegin, size_t cbSearch)
         );
         if (match)
         {
-            match += 19 + *(int*)(match + 15) + 25;
-            if (VirtualProtect(match, 8, PAGE_EXECUTE_READWRITE, &dwOldProtect))
+            match += 19 + *(int*)(match + 15);
+            match = FindPattern(
+                match + 19, 20,
+                "\x83\x43\x04\x00\x83\x43\x0C\x00\x48\x83\xC4\x20\x5B\xC3",
+                "xxx?xxx?xxxxxx"
+            );
+            if (match && VirtualProtect(match, 8, PAGE_EXECUTE_READWRITE, &dwOldProtect))
             {
                 match[3] = 3;
                 match[7] = (BYTE)-1;
@@ -9284,41 +9300,45 @@ static void PatchAddressBarSizing(PBYTE pSearchBegin, size_t cbSearch)
             }
         }
 
-        // CAddressBand::_GetAdjustedClientRect(), including 29591+ without a post-call NOP.
-        // 83 43 04 ?? 83 43 0C ?? 48 83 C4 20 5B C3
-        //          xx To 03    xx To FF (-1)
+        // CAddressBand::_AddressBandWndProc() WM_PAINT: RECT for DrawThemeBackground().
+        // 26100.9343+, 28000.3142+: inlined with XORPS between the RECT adjustments.
+        // Search this first: these builds also keep the standalone helper for _PositionChildWindows().
+        // 83 45 ?? ?? 0F 57 C0 83 6D ?? ??
+        //          xx To 03          xx To 01
         match = FindPattern(
             pSearchBegin,
             cbSearch,
-            "\x83\x43\x04\x00\x83\x43\x0C\x00\x48\x83\xC4\x20\x5B\xC3",
-            "xxx?xxx?xxxxxx"
+            "\x83\x45\x00\x00\x0F\x57\xC0\x83\x6D\x00\x00\x0F\x11\x45\x00",
+            "xx??xxxxx??xxx?"
         );
         if (match)
         {
-            if (VirtualProtect(match, 8, PAGE_EXECUTE_READWRITE, &dwOldProtect))
+            if (VirtualProtect(match, 11, PAGE_EXECUTE_READWRITE, &dwOldProtect))
             {
                 match[3] = 3;
-                match[7] = (BYTE)-1;
-                VirtualProtect(match, 8, dwOldProtect, &dwOldProtect);
+                match[10] = 1;
+                VirtualProtect(match, 11, dwOldProtect, &dwOldProtect);
             }
         }
         else
         {
-            // 26100.9606+: inlined calculation with XORPS between the RECT adjustments.
-            // Ref: CAddressBand::_AddressBandWndProc()
+            // _AddressBandWndProc() calls the standalone CAddressBand::_GetAdjustedClientRect(),
+            // including 29591+ without a post-call NOP.
+            // 83 43 04 ?? 83 43 0C ?? 48 83 C4 20 5B C3
+            //          xx To 03    xx To FF (-1)
             match = FindPattern(
                 pSearchBegin,
                 cbSearch,
-                "\x83\x45\x00\x00\x0F\x57\xC0\x83\x6D\x00\x00\x0F\x11\x45\x00",
-                "xx??xxxxx??xxx?"
+                "\x83\x43\x04\x00\x83\x43\x0C\x00\x48\x83\xC4\x20\x5B\xC3",
+                "xxx?xxx?xxxxxx"
             );
             if (match)
             {
-                if (VirtualProtect(match, 11, PAGE_EXECUTE_READWRITE, &dwOldProtect))
+                if (VirtualProtect(match, 8, PAGE_EXECUTE_READWRITE, &dwOldProtect))
                 {
                     match[3] = 3;
-                    match[10] = 1;
-                    VirtualProtect(match, 11, dwOldProtect, &dwOldProtect);
+                    match[7] = (BYTE)-1;
+                    VirtualProtect(match, 8, dwOldProtect, &dwOldProtect);
                 }
             }
             else
@@ -11080,11 +11100,38 @@ LSTATUS pnidui_RegGetValueW(HKEY hkey, LPCWSTR lpSubKey, LPCWSTR lpValue, DWORD 
     return status;
 }
 
+static BOOL CALLBACK pnidui_FindVanWindow(HWND hWnd, LPARAM lParam)
+{
+    if (GetPropW(hWnd, L"View Available Networks"))
+    {
+        *(HWND*)lParam = hWnd;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+// Implementation based on 22621.3527 VAN.dll's HideVAN
+static void pnidui_HideVAN(void)
+{
+    UINT message = RegisterWindowMessageW(L"WM_VANUI_HIDE");
+    if (message)
+    {
+        HWND hWnd = NULL;
+        EnumChildWindows(NULL, pnidui_FindVanWindow, (LPARAM)&hWnd);
+        if (hWnd)
+        {
+            PostMessageW(hWnd, message, 0, 0);
+        }
+    }
+}
+
 void PatchPnidui(HMODULE hPnidui)
 {
     VnPatchIAT(hPnidui, "api-ms-win-core-com-l1-1-0.dll", "CoCreateInstance", pnidui_CoCreateInstanceHook);
     if (global_rovi.dwBuildNumber >= 25236)
     {
+        // Captive portal cleanup calls HideVAN; delay loading the removed VAN.dll crashes Explorer (#5235)
+        VnPatchDelayIAT(hPnidui, "van.dll", "HideVAN", pnidui_HideVAN);
         VnPatchIAT(hPnidui, "api-ms-win-core-registry-l1-1-0.dll", "RegGetValueW", pnidui_RegGetValueW);
     }
     VnPatchIAT(hPnidui, "user32.dll", "TrackPopupMenu", pnidui_TrackPopupMenuHook);
